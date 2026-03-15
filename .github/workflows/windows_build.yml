@@ -6,7 +6,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -24,17 +24,38 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11' # Using a stable long-term version for CI reliability
+        python-version: '3.10'
+
+    - name: Install wkhtmltopdf
+      run: choco install wkhtmltopdf
 
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pyinstaller
+        pip install pyinstaller packaging
+
+    - name: Locate CEF Binaries
+      id: cef
+      shell: bash
+      run: |
+        CEF_PATH=$(python -c "import cefpython3, os; print(os.path.dirname(cefpython3.__file__))")
+        echo "CEF_PATH=$CEF_PATH" >> $GITHUB_ENV
+        echo "Successfully located CEF at: $CEF_PATH"
 
     - name: Compile Python to EXE (PyInstaller)
       run: |
-        pyinstaller --noconfirm --onedir --windowed --name "Kodys Foot Clinik" --add-data "app_config;app_config" --add-data "kodys;kodys" application_code\run.py
+        pyinstaller --noconfirm --onedir --windowed --name "Kodys Foot Clinik" ^
+          --add-data "app_config;app_config" ^
+          --add-data "kodys;kodys" ^
+          --add-data "app_assets;app_assets" ^
+          --add-data "${{ env.CEF_PATH }};cefpython3" ^
+          --hidden-import "cefpython3" ^
+          --hidden-import "PyQt5.QtWebEngineWidgets" ^
+          --hidden-import "PyQt5.QtPrintSupport" ^
+          --hidden-import "cv2" ^
+          --hidden-import "pywinusb.hid" ^
+          application_code\run.py
 
     - name: Install Inno Setup
       run: choco install innosetup
@@ -52,6 +73,7 @@ jobs:
 
     - name: Create Public Release Link
       uses: softprops/action-gh-release@v2
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
       with:
         tag_name: latest
         files: Output/*.exe

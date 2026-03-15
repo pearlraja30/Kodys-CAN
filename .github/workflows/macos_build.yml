@@ -24,25 +24,28 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.10'
 
     - name: Install Dependencies
       run: |
         python3 -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pyinstaller
+        pip install pyinstaller packaging
 
     - name: Compile macOS Bundle (PyInstaller)
       run: |
         pyinstaller --noconfirm --onedir --windowed \
             --add-data "app_config:app_config" \
             --add-data "kodys:kodys" \
+            --add-data "app_assets:app_assets" \
             --name "KodysCAN" \
+            --hidden-import "PyQt5.QtWebEngineWidgets" \
+            --hidden-import "PyQt5.QtPrintSupport" \
+            --hidden-import "cv2" \
             application_code/run.py
 
     - name: Create DMG Disk Image
       run: |
-        # Ensure we have the build
         ls -R dist/
         mkdir -p dmg_root
         cp -r "dist/KodysCAN.app" dmg_root/
@@ -56,6 +59,7 @@ jobs:
 
     - name: Create Public Release Link
       uses: softprops/action-gh-release@v2
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
       with:
         tag_name: latest
         files: KodysCAN_macOS_Setup.dmg
