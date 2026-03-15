@@ -1,6 +1,16 @@
 # An example of embedding CEF browser in a PyQt4 application.
 # Tested with PyQt 4.10.3 (Qt 4.8.5).
 import os, sys, math
+
+# Fix for PyInstaller Windowed mode where stdout/stderr is None
+if sys.stdout is None:
+    class NullWriter:
+        def write(self, *args, **kwargs): pass
+        def flush(self, *args, **kwargs): pass
+    sys.stdout = NullWriter()
+if sys.stderr is None:
+    sys.stderr = sys.stdout
+
 try:
     import kodys.qt_compat
 except ImportError:
