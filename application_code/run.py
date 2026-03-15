@@ -264,13 +264,27 @@ class MainFrame(QtGui.QWidget):
         windowInfo = cefpython.WindowInfo()
         windowInfo.SetAsChild(int(self.winId()))
         self.parent = parent
+        # Wait for the internal clinical server with a 45-second safety timeout
+        start_wait = time.time()
         while True:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             result = sock.connect_ex(("127.0.0.1", 5423))
             sock.close()
             if result == 0:
+                logger.info("Internal Clinical Server Connected Successfully.")
                 break
-            # Allow the GUI to remain responsive while waiting for the internal server
+            
+            # Check for timeout (45 seconds)
+            if time.time() - start_wait > 45:
+                logger.error("FATAL: Clinical Server timed out after 45 seconds.")
+                QtGui.QMessageBox.critical(
+                    self, 
+                    "System Error", 
+                    "The Clinical Database Server failed to start.\n\nPlease check 'kodys_debug.log' and contact support."
+                )
+                sys.exit(1)
+
+            # Allow the GUI to remain responsive while waiting
             QtGui.QApplication.processEvents()
             time.sleep(0.1)
         self.browser = cefpython.CreateBrowserSync(
@@ -2460,12 +2474,27 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
     logger.info(f"Process ID: {os.getpid()} | Args: {sys.argv}")
 
-    # --- INFINTIE LOOP GUARD ---
-    # If the frozen EXE is called with 'runserver', it must act as the server host.
-    # We check if 'runserver' is in the arguments to avoid launching a second GUI.
+    # --- INFINTIE LOOP GUARD & SERVER DISPATCHER ---
     if len(sys.argv) > 1 and "runserver" in sys.argv:
-        logger.info("Background Mode: Clinical Server is active.")
-        # When frozen, manage.py is handled by the bundler's internal execution
+        logger.info("Background Mode: Initializing Clinical Server...")
+        try:
+            # We must manually set up the Django environment here because the 
+            # frozen EXE is acting as the interpreter.
+            os.environ.setdefault('DJANGO_SETTINGS_MODULE', f'{project_dir_name}.settings')
+            import django
+            django.setup()
+            from django.core.management import execute_from_command_line
+            
+            # The executable used manage_path as the second arg, but we want to 
+            # pass the args starting from 'runserver'.
+            # Args are typically: [EXE, manage_path, runserver, 127.0.0.1:5423, --noreload]
+            django_args = [sys.argv[1]] + sys.argv[2:] # [manage.py, runserver, ...]
+            logger.info(f"Executing Django Command: {django_args}")
+            execute_from_command_line(django_args)
+            sys.exit(0)
+        except Exception as e:
+            logger.error(f"CRITICAL: Clinical Server failed to start: {e}")
+            sys.exit(1)
     else:
         logger.info("Primary Mode: Launching Clinical GUI...")
 
@@ -2543,10 +2572,7 @@ if __name__ == "__main__":
         except Exception as e:
             logger.error(f"FATAL: Clinical Server failed to launch: {e}")
 
-    # If we are the background process, the 'runserver' logic is already executing via the Popen entry point.
-    # We must exit the main execution path if we are just a background worker.
-    if len(sys.argv) > 1 and "runserver" in sys.argv:
-        sys.exit(0)
+    # The background dispatcher above handles sys.exit(0) if in runserver mode.
 
     print("[pyqt.py] PyQt version: %s" % QtCore.PYQT_VERSION_STR)
     print("[pyqt.py] QtCore version: %s" % QtCore.qVersion())

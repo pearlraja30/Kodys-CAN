@@ -71,7 +71,11 @@ try:
         def MessageLoopWork(self): pass
         def Shutdown(self): pass
         def GetModuleDirectory(self): return ""
-        def JavascriptBindings(self, **k): return type('obj', (object,), {'SetFunction': lambda *a: None})()
+        def JavascriptBindings(self, **k): 
+            return type('obj', (object,), {
+                'SetFunction': lambda *a: None,
+                'SetObject': lambda *a: None
+            })()
         def WindowInfo(self): return WindowInfoShim()
 
     cef_instance = CEFShim()
