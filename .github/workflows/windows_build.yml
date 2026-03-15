@@ -28,8 +28,7 @@ jobs:
 
     - name: Compile Python to EXE (PyInstaller)
       run: |
-        # We manually run the command from build_windows.bat but in a CI-friendly way
-        pyinstaller --noconfirm --onedir --windowed --add-data "app_config;app_config" --add-data "kodys;kodys" application_code\run.py
+        pyinstaller --noconfirm --onedir --windowed --name "Kodys Foot Clinik" --add-data "app_config;app_config" --add-data "kodys;kodys" application_code\run.py
 
     - name: Install Inno Setup
       run: choco install innosetup

@@ -9,9 +9,9 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\{#MyAppName}
-SetupIconFile=C:\Users\admin\Documents\Kodys\Kodys\appicon.ico
-OutputDir=C:\Users\admin\Documents\my_workspace
-OutputBaseFilename="Kodys Foot Clinik Installer"
+SetupIconFile=..\app_assets\appicon.ico
+OutputDir=..\Output
+OutputBaseFilename="Kodys_Foot_Clinik_Setup"
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -21,7 +21,7 @@ WizardStyle=modern
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\admin\Documents\Kodys\Kodys\*"; DestDir: "{app}"; Flags: recursesubdirs
+Source: "..\dist\Kodys Foot Clinik\*"; DestDir: "{app}"; Flags: recursesubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
