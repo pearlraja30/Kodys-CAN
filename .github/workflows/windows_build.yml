@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
     - name: Checkout Code
@@ -35,6 +37,7 @@ jobs:
 
     - name: Build Clinical Installer (Inno Setup)
       run: |
+        mkdir Output
         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" application_code/kodys_inno_setup.iss
 
     - name: Upload Installer Artifact
