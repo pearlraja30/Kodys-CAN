@@ -1,11 +1,11 @@
 """
-Kodys CAN - Master Compatibility Engine (V3.0 - Ultra Robust)
+Kodys CAN - Master Compatibility Engine (V3.2 - Complete Clinical API)
 Unifies legacy PyQt4 and CEF logic into modern PyQt5.
 """
 import sys
 import types
 
-KODYS_SHIM_VERSION = "3.0.2"
+KODYS_SHIM_VERSION = "3.2.0"
 
 def create_module_shim(name, members):
     mod = types.ModuleType(name)
@@ -45,7 +45,21 @@ try:
     class CEFBrowserShim(QtWebEngine.QWebEngineView):
         def GetMainFrame(self): return self
         def LoadUrl(self, url): self.setUrl(QtCore.QUrl(url))
+        def GetUrl(self): return self.url().toString()
         def ExecuteJavascript(self, js): self.page().runJavaScript(js)
+        def SetClientHandler(self, handler): self.handler = handler
+        def GetJavascriptBindings(self): return type('obj', (object,), {'SetFunction': lambda *a: None})()
+        def SetJavascriptBindings(self, bindings): self.bindings = bindings
+        
+        def ExecuteFunction(self, name, *args):
+            # Convert Python arguments to JS-safe strings
+            import json
+            js_args = [json.dumps(a) for a in args]
+            js_code = f"{name}({', '.join(js_args)})"
+            self.page().runJavaScript(js_code)
+
+    class WindowInfoShim:
+        def SetAsChild(self, winId): self.winId = winId
 
     class CEFShim:
         def __init__(self):
@@ -58,10 +72,9 @@ try:
         def Shutdown(self): pass
         def GetModuleDirectory(self): return ""
         def JavascriptBindings(self, **k): return type('obj', (object,), {'SetFunction': lambda *a: None})()
-        def WindowInfo(self): return type('obj', (object,), {})()
+        def WindowInfo(self): return WindowInfoShim()
 
     cef_instance = CEFShim()
-    # PRE-FILTER the members to be absolutely certain __class__ never reaches the shim
     cef_members = {k: getattr(cef_instance, k) for k in dir(cef_instance) if not k.startswith('_')}
     
     create_module_shim('cefpython3', {'cefpython': cef_instance})
