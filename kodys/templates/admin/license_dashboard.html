@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kodys - Admin License Portal</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
+        .header { background-color: #00bdb6; color: white; padding: 20px; text-align: center; }
+        .container { display: flex; max-width: 1200px; margin: 20px auto; padding: 20px; gap: 20px; }
+        .form-section, .list-section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .form-section { flex: 1; }
+        .list-section { flex: 2; overflow-x: auto; }
+        input[type=text], input[type=email], textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        input[type=submit] { background-color: #00bdb6; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold; width: 100%; }
+        input[type=submit]:hover { background-color: #009993; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #00bdb6; color: white; }
+        .status-active { color: green; font-weight: bold; }
+        .status-revoked { color: red; font-weight: bold; }
+        .message { padding: 10px; border-radius: 4px; margin-bottom: 10px; text-align: center; font-weight: bold;}
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Kodys Enterprise License Portal</h1>
+    <p>Generate, monitor, and manage clinical hardware unlocks globally.</p>
+</div>
+
+<div class="container">
+    <div class="form-section">
+        <h3>Generate New License</h3>
+        {% if msg %}
+            <div class="message {{ msg_class }}">{{ msg }}</div>
+        {% endif %}
+        <form method="POST">
+            {% csrf_token %}
+            <label>Customer/Hospital Name *</label>
+            <input type="text" name="client_name" required>
+            
+            <label>Hardware ID (e.g. KODY-XXXX-XXXX-XXXX) *</label>
+            <input type="text" name="hardware_id" required>
+            
+            <label>Contact Email</label>
+            <input type="email" name="email">
+
+            <label>Internal Administrator Notes</label>
+            <textarea name="notes" rows="3"></textarea>
+            
+            <input type="submit" value="Generate Cryptographic Key">
+        </form>
+    </div>
+
+    <div class="list-section">
+        <h3>Activated Client Systems ({{ licenses|length }})</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date Generated</th>
+                    <th>Hospital / Client</th>
+                    <th>Hardware ID</th>
+                    <th>Crypto Key</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lic in licenses %}
+                <tr>
+                    <td>{{ lic.CREATED_ON|date:"Y-m-d H:i" }}</td>
+                    <td><b>{{ lic.CLIENT_NAME }}</b><br><small>{{ lic.EMAIL }}</small></td>
+                    <td style="font-family: monospace;">{{ lic.HARDWARE_ID }}</td>
+                    <td style="font-family: monospace; color: #00bdb6; font-weight: bold;">{{ lic.GENERATED_KEY }}</td>
+                    <td class="status-{{ lic.STATUS|lower }}">{{ lic.STATUS }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center;">No clinical licenses generated yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>
