@@ -1,5 +1,9 @@
 import os
 import sys
+try:
+    import kodys.qt_compat
+except ImportError:
+    pass
 import json
 import urllib.request
 import threading

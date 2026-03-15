@@ -1,6 +1,10 @@
 # An example of embedding CEF browser in a PyQt4 application.
 # Tested with PyQt 4.10.3 (Qt 4.8.5).
 import os, sys, math
+try:
+    import kodys.qt_compat
+except ImportError:
+    pass
 import subprocess, time, socket
 import json
 import compileall

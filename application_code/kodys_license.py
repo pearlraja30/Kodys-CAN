@@ -1,5 +1,9 @@
 import os
 import sys
+try:
+    import kodys.qt_compat
+except ImportError:
+    pass
 from PyQt4 import QtGui, QtCore
 
 # Import shared core licensing logic
