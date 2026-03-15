@@ -1,0 +1,48 @@
+name: Build Kodys macOS App
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.14'
+
+    - name: Install Dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Compile macOS Bundle (PyInstaller)
+      run: |
+        pyinstaller --noconfirm --onedir --windowed \
+            --add-data "app_config:app_config" \
+            --add-data "kodys:kodys" \
+            --name "KodysCAN" \
+            application_code/run.py
+
+    - name: Create DMG Disk Image
+      run: |
+        # Creates a basic DMG for clinical distribution
+        mkdir -p dmg_root
+        cp -r dist/KodysCAN.app dmg_root/
+        hdiutil create -volname "KodysCAN-Setup" -srcfolder dmg_root -ov -format UDZO KodysCAN_macOS_Setup.dmg
+
+    - name: Upload macOS Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Kodys-macOS-Setup
+        path: KodysCAN_macOS_Setup.dmg
