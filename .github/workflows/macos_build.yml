@@ -50,3 +50,11 @@ jobs:
       with:
         name: Kodys-macOS-Setup
         path: KodysCAN_macOS_Setup.dmg
+
+    - name: Create Public Release Link
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: latest
+        files: KodysCAN_macOS_Setup.dmg
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
