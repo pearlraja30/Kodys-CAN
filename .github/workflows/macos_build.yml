@@ -27,11 +27,13 @@ jobs:
         python-version: '3.12'
         check-latest: true
 
-    - name: Install System Dependencies
+    - name: Install System Dependencies (wkhtmltopdf)
       run: |
-        brew install --cask wkhtmltopdf
+        curl -L https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1.macos-cocoa.pkg -o wkhtmltox.pkg
+        sudo installer -pkg wkhtmltox.pkg -target /
+        which wkhtmltopdf || echo "/usr/local/bin/wkhtmltopdf"
 
-    - name: Install Dependencies
+    - name: Install Python Dependencies
       run: |
         python3 -m pip install --upgrade pip
         pip install -r requirements.txt
@@ -64,7 +66,7 @@ jobs:
 
     - name: Create Public Release Link
       uses: softprops/action-gh-release@v2
-      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
         tag_name: latest
         files: KodysCAN_macOS_Setup.dmg
