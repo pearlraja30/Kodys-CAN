@@ -23,7 +23,10 @@ def generate_expected_license(hardware_id):
 
 def verify_license(hardware_id, user_license_key):
     expected_key = generate_expected_license(hardware_id)
-    return user_license_key.strip().upper() == expected_key
+    # Robust comparison: ignore dashes and spaces
+    clean_user = user_license_key.replace("-", "").replace(" ", "").upper()
+    clean_expected = expected_key.replace("-", "").replace(" ", "").upper()
+    return clean_user == clean_expected
 
 def get_license_filepath():
     app_dir = os.path.dirname(os.path.abspath(__file__))
@@ -41,8 +44,11 @@ def load_saved_license():
 
 def save_license(license_key):
     path = get_license_filepath()
+    # Save the key in standard format (with dashes)
+    clean_key = license_key.replace("-", "").replace(" ", "").upper()
+    formatted_key = f"{clean_key[:4]}-{clean_key[4:8]}-{clean_key[8:12]}-{clean_key[12:16]}-{clean_key[16:20]}"
     with open(path, 'w') as f:
-        f.write(license_key.strip().upper())
+        f.write(formatted_key)
 
 def is_system_licensed():
     """Returns True if the system has a valid license."""
