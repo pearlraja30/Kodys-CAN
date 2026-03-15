@@ -11,6 +11,26 @@ if sys.stdout is None:
 if sys.stderr is None:
     sys.stderr = sys.stdout
 
+import logging
+import sys
+import os
+
+# --- Diagnostic Logging Setup ---
+DEBUG_MODE = "--debug" in sys.argv
+LOG_FILE = os.path.join(os.path.expanduser("~"), "kodys_debug.log") if getattr(sys, 'frozen', False) else "kodys_debug.log"
+
+logging.basicConfig(
+    level=logging.DEBUG if DEBUG_MODE else logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_FILE, mode='w'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger("KodysDiagnostic")
+logger.info("=== Kodys Clinical Boot Sequence Started ===")
+# --------------------------------
+
 try:
     import kodys.qt_compat
 except ImportError:
@@ -1984,7 +2004,7 @@ class External(object):
                 assets_media_dir_path + "\\podo_i_mat\\",
             )
             from PIL import Image
-            import cv2
+            from PIL import ImageFile
 
             img = cv2.imread(img_src)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -2436,46 +2456,65 @@ class CefApplication(QtGui.QApplication):
 
 
 if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.freeze_support()
+    logger.info(f"Process ID: {os.getpid()} | Args: {sys.argv}")
+
+    # --- INFINTIE LOOP GUARD ---
+    # If the frozen EXE is called with 'runserver', it must act as the server host.
+    # We check if 'runserver' is in the arguments to avoid launching a second GUI.
+    if len(sys.argv) > 1 and "runserver" in sys.argv:
+        logger.info("Background Mode: Clinical Server is active.")
+        # When frozen, manage.py is handled by the bundler's internal execution
+    else:
+        logger.info("Primary Mode: Launching Clinical GUI...")
+
     config_file_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "config", "config.json")
     )
+    logger.info(f"Looking for config at: {config_file_path}")
     project_dir_name = "app_config" # Robust default fallback
     try:
-        with open(config_file_path) as data_file:
-            data = json.load(data_file)
-            django_app_data = data["application"]
-            project_dir_name = django_app_data.get("project_dir_name", "app_config")
-            assets_dir_name = django_app_data["assets_dir_name"]
-            assets_media_dir_name = django_app_data["assets_media_dir_name"]
-            project_dir_path = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", project_dir_name)
-            )
-            assets_dir_path = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", assets_dir_name)
-            )
-            assets_media_dir_path = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", assets_media_dir_name)
-            )
-            window_data = data["window"]
-            dev_tools_menu_enabled = bool(
-                util.strtobool(window_data["dev_tools_menu_enabled"].lower())
-            )
-            initial_width = int(window_data["width"])
-            initial_height = int(window_data["height"])
-            min_width = int(window_data["min_width"])
-            min_height = int(window_data["min_height"])
-            window_title = window_data["title"]
-            icon_name = window_data["icon"]
-            icon_name = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", "config", icon_name)
-            )
-            fullscreen_allowed = bool(
-                util.strtobool(window_data["fullscreen_allowed"].lower())
-            )
-            max_width = int(window_data["max_width"])
-            max_height = int(window_data["max_height"])
+        if os.path.exists(config_file_path):
+            with open(config_file_path) as data_file:
+                data = json.load(data_file)
+                django_app_data = data["application"]
+                project_dir_name = django_app_data.get("project_dir_name", "app_config")
+                logger.info(f"Config Loaded. Project Dir: {project_dir_name}")
+                assets_dir_name = django_app_data["assets_dir_name"]
+                assets_media_dir_name = django_app_data["assets_media_dir_name"]
+                project_dir_path = os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), "..", project_dir_name)
+                )
+                assets_dir_path = os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), "..", assets_dir_name)
+                )
+                assets_media_dir_path = os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), "..", assets_media_dir_name)
+                )
+                window_data = data["window"]
+                dev_tools_menu_enabled = bool(
+                    util.strtobool(window_data["dev_tools_menu_enabled"].lower())
+                )
+                initial_width = int(window_data["width"])
+                initial_height = int(window_data["height"])
+                min_width = int(window_data["min_width"])
+                min_height = int(window_data["min_height"])
+                window_title = window_data["title"]
+                icon_name = window_data["icon"]
+                icon_name = os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), "..", "config", icon_name)
+                )
+                fullscreen_allowed = bool(
+                    util.strtobool(window_data["fullscreen_allowed"].lower())
+                )
+                max_width = int(window_data["max_width"])
+                max_height = int(window_data["max_height"])
+        else:
+            logger.warning("Config file MISSING. Using hardcoded clinical defaults.")
     except Exception as e:
-        print(f"Config Load Warning: {e}. Using defaults.")
+        logger.error(f"Config Load Error: {e}. Using defaults.")
+
     compileall.compile_dir(project_dir_path if 'project_dir_path' in locals() else project_dir_name, force=True)
     
     # Robust Subprocess Startup for Frozen Environment
@@ -2483,20 +2522,32 @@ if __name__ == "__main__":
     if not os.path.exists(manage_path):
         manage_path = os.path.join(os.path.dirname(__file__), "..", project_dir_name, "manage.pyc")
     
-    # If frozen, use the bundled interpreter (sys.executable)
-    executable = sys.executable if getattr(sys, 'frozen', False) else "python"
-    
-    # Hide the black console window for the Django server
-    startupinfo = None
-    if os.name == 'nt':
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    
-    proc = subprocess.Popen(
-        [executable, manage_path, "runserver", "127.0.0.1:5423", "--noreload"],
-        startupinfo=startupinfo,
-        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-    )
+    # Only spawn the server if we are the PRIMARY GUI process
+    if not (len(sys.argv) > 1 and "runserver" in sys.argv):
+        logger.info(f"Launching Background Server: {manage_path}")
+        executable = sys.executable if getattr(sys, 'frozen', False) else "python"
+        cmd = [executable, manage_path, "runserver", "127.0.0.1:5423", "--noreload"]
+        
+        try:
+            startupinfo = None
+            if os.name == 'nt' and not DEBUG_MODE:
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            
+            proc = subprocess.Popen(
+                cmd,
+                startupinfo=startupinfo,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' and not DEBUG_MODE else 0
+            )
+            logger.info(f"Clinical Server Process Started (PID: {proc.pid})")
+        except Exception as e:
+            logger.error(f"FATAL: Clinical Server failed to launch: {e}")
+
+    # If we are the background process, the 'runserver' logic is already executing via the Popen entry point.
+    # We must exit the main execution path if we are just a background worker.
+    if len(sys.argv) > 1 and "runserver" in sys.argv:
+        sys.exit(0)
+
     print("[pyqt.py] PyQt version: %s" % QtCore.PYQT_VERSION_STR)
     print("[pyqt.py] QtCore version: %s" % QtCore.qVersion())
 
@@ -2504,7 +2555,7 @@ if __name__ == "__main__":
 
     # Application settings
     settings = {
-        "debug": True,
+        "debug": DEBUG_MODE,
         "log_severity": cefpython.LOGSEVERITY_INFO,
         "log_file": GetApplicationPath("debug.log"),
         "release_dcheck_enabled": True,
@@ -2515,14 +2566,11 @@ if __name__ == "__main__":
         "context_menu": {"enabled": dev_tools_menu_enabled},
     }
 
-    # Command line switches set programmatically
     switches = {"remote_debugging_port": "http://127.0.0.1:5423"}
-
     cefpython.Initialize(settings, switches)
 
     app = CefApplication(sys.argv)
     
-    # Block startup if invalid license
     if kodys_license is not None:
         kodys_license.ensure_licensed(app)
 
@@ -2530,9 +2578,7 @@ if __name__ == "__main__":
     app_dir_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
     splash_pix = QtGui.QPixmap(app_dir_path + "\\splash_screen.png")
     splash = QtGui.QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
-    splash.setWindowFlags(
-        QtCore.Qt.WindowStaysOnTopHint | QtCore.Qt.FramelessWindowHint
-    )
+    splash.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint | QtCore.Qt.FramelessWindowHint)
     splash.setEnabled(False)
     progressBar = QtGui.QProgressBar(splash)
     progressBar.setMaximum(10)
@@ -2551,7 +2597,6 @@ if __name__ == "__main__":
             app.processEvents()
     splash.finish(mainWindow)
     
-    # Trigger Auto-Update Ecosystem Hook
     if kodys_updater is not None:
         kodys_updater.initialize_updater(mainWindow)
         
@@ -2559,5 +2604,4 @@ if __name__ == "__main__":
     app.stopTimer()
     del mainWindow
     del app
-
     cefpython.Shutdown()
