@@ -28,7 +28,7 @@ jobs:
 
     - name: Install System Dependencies
       run: |
-        brew install wkhtmltopdf
+        brew install --cask wkhtmltopdf
 
     - name: Install Dependencies
       run: |
