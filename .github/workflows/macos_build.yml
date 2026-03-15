@@ -18,7 +18,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.14'
+        python-version: '3.11'
 
     - name: Install Dependencies
       run: |
@@ -36,9 +36,10 @@ jobs:
 
     - name: Create DMG Disk Image
       run: |
-        # Creates a basic DMG for clinical distribution
+        # Ensure we have the build
+        ls -R dist/
         mkdir -p dmg_root
-        cp -r dist/KodysCAN.app dmg_root/
+        cp -r "dist/KodysCAN.app" dmg_root/
         hdiutil create -volname "KodysCAN-Setup" -srcfolder dmg_root -ov -format UDZO KodysCAN_macOS_Setup.dmg
 
     - name: Upload macOS Artifact
