@@ -36,6 +36,12 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller packaging
 
+    - name: Clean Python Cache
+      run: |
+        Get-ChildItem -Path . -Include __pycache__ -Recurse | Remove-Item -Recurse -Force
+        Get-ChildItem -Path . -Include *.pyc -Recurse | Remove-Item -Force
+      shell: pwsh
+
     - name: Compile Python to EXE (PyInstaller)
       shell: pwsh
       run: |
@@ -45,6 +51,13 @@ jobs:
           --add-data "app_assets;app_assets" `
           --add-data "config;config" `
           --add-data "db.sqlite3;." `
+          --exclude-module "tkinter" `
+          --exclude-module "unittest" `
+          --exclude-module "pydoc" `
+          --exclude-module "setuptools" `
+          --exclude-module "distutils" `
+          --exclude-module "jedi" `
+          --exclude-module "IPython" `
           --hidden-import "PyQt5.QtWebEngineWidgets" `
           --hidden-import "PyQt5.QtPrintSupport" `
           --hidden-import "cv2" `

@@ -20,5 +20,5 @@ PyQt5>=5.15.10
 PyQtWebEngine>=5.15.6
 packaging>=24.0
 pywinusb>=0.4.2; sys_platform == 'win32'
-opencv-python>=4.10.0.84
+opencv-python-headless>=4.10.0.84
 psutil>=5.9.8

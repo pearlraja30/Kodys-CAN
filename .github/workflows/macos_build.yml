@@ -39,6 +39,11 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller packaging
 
+    - name: Clean Python Cache
+      run: |
+        find . -name "__pycache__" -type d -exec rm -rf {} +
+        find . -name "*.pyc" -delete
+
     - name: Compile macOS Bundle (PyInstaller)
       run: |
         pyinstaller --noconfirm --onedir --windowed \
@@ -47,15 +52,25 @@ jobs:
             --add-data "app_assets:app_assets" \
             --add-data "config:config" \
             --add-data "db.sqlite3:." \
+            --exclude-module "tkinter" \
+            --exclude-module "unittest" \
+            --exclude-module "pydoc" \
+            --exclude-module "setuptools" \
+            --exclude-module "distutils" \
+            --exclude-module "jedi" \
+            --exclude-module "IPython" \
             --name "KodysCAN" \
             --hidden-import "PyQt5.QtWebEngineWidgets" \
             --hidden-import "PyQt5.QtPrintSupport" \
             --hidden-import "cv2" \
             application_code/run.py
 
+    - name: Strip Binaries (macOS Slimming)
+      run: |
+        find "dist/KodysCAN.app" -name "*.so" -exec strip -x {} + || true
+
     - name: Create DMG Disk Image
       run: |
-        ls -R dist/
         mkdir -p dmg_root
         cp -r "dist/KodysCAN.app" dmg_root/
         hdiutil create -volname "KodysCAN-Setup" -srcfolder dmg_root -ov -format UDZO KodysCAN_macOS_Setup.dmg
