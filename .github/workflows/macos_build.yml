@@ -60,15 +60,22 @@ jobs:
             --hidden-import "distutils" \
             application_code/run.py
 
+    - name: Diagnose Bundle Size
+      run: |
+        du -sh dist/KodysCAN.app
+        find dist/KodysCAN.app -name "*" -size +10M -exec ls -lh {} + | sort -hr
+
     - name: Strip Binaries (macOS Slimming)
       run: |
         find "dist/KodysCAN.app" -name "*.so" -exec strip -x {} + || true
+        find "dist/KodysCAN.app" -name "*.dylib" -exec strip -x {} + || true
 
     - name: Create DMG Disk Image
       run: |
         mkdir -p dmg_root
         cp -r "dist/KodysCAN.app" dmg_root/
-        hdiutil create -volname "KodysCAN-Setup" -srcfolder dmg_root -ov -format UDZO KodysCAN_macOS_Setup.dmg
+        # Use ULMO (LZMA) for maximum compression parity with Windows Inno Setup
+        hdiutil create -volname "KodysCAN-Setup" -srcfolder dmg_root -ov -format ULMO KodysCAN_macOS_Setup.dmg
 
     - name: Upload macOS Artifact
       uses: actions/upload-artifact@v4
