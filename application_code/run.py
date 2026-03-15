@@ -250,6 +250,9 @@ class MainFrame(QtGui.QWidget):
             sock.close()
             if result == 0:
                 break
+            # Allow the GUI to remain responsive while waiting for the internal server
+            QtGui.QApplication.processEvents()
+            time.sleep(0.1)
         self.browser = cefpython.CreateBrowserSync(
             windowInfo,
             browserSettings={},
@@ -2436,11 +2439,12 @@ if __name__ == "__main__":
     config_file_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "config", "config.json")
     )
+    project_dir_name = "app_config" # Robust default fallback
     try:
         with open(config_file_path) as data_file:
             data = json.load(data_file)
             django_app_data = data["application"]
-            project_dir_name = django_app_data["project_dir_name"]
+            project_dir_name = django_app_data.get("project_dir_name", "app_config")
             assets_dir_name = django_app_data["assets_dir_name"]
             assets_media_dir_name = django_app_data["assets_media_dir_name"]
             project_dir_path = os.path.abspath(
@@ -2470,16 +2474,28 @@ if __name__ == "__main__":
             )
             max_width = int(window_data["max_width"])
             max_height = int(window_data["max_height"])
-    except:
-        print("Failed Reading Config")
-    compileall.compile_dir(project_dir_path, force=True)
+    except Exception as e:
+        print(f"Config Load Warning: {e}. Using defaults.")
+    compileall.compile_dir(project_dir_path if 'project_dir_path' in locals() else project_dir_name, force=True)
+    
+    # Robust Subprocess Startup for Frozen Environment
+    manage_path = os.path.join(os.path.dirname(__file__), "..", project_dir_name, "manage.py")
+    if not os.path.exists(manage_path):
+        manage_path = os.path.join(os.path.dirname(__file__), "..", project_dir_name, "manage.pyc")
+    
+    # If frozen, use the bundled interpreter (sys.executable)
+    executable = sys.executable if getattr(sys, 'frozen', False) else "python"
+    
+    # Hide the black console window for the Django server
+    startupinfo = None
+    if os.name == 'nt':
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    
     proc = subprocess.Popen(
-        [
-            "python",
-            "..\\" + project_dir_name + "\\manage.pyc",
-            "runserver",
-            "127.0.0.1:5423",
-        ]
+        [executable, manage_path, "runserver", "127.0.0.1:5423", "--noreload"],
+        startupinfo=startupinfo,
+        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
     )
     print("[pyqt.py] PyQt version: %s" % QtCore.PYQT_VERSION_STR)
     print("[pyqt.py] QtCore version: %s" % QtCore.qVersion())

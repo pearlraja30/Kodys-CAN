@@ -45,6 +45,8 @@ jobs:
             --add-data "app_config:app_config" \
             --add-data "kodys:kodys" \
             --add-data "app_assets:app_assets" \
+            --add-data "config:config" \
+            --add-data "db.sqlite3:." \
             --name "KodysCAN" \
             --hidden-import "PyQt5.QtWebEngineWidgets" \
             --hidden-import "PyQt5.QtPrintSupport" \
