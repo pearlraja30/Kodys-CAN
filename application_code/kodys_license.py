@@ -2,6 +2,11 @@ import os
 import sys
 import threading
 import requests
+import logging
+import traceback
+
+logger = logging.getLogger("KodysDiagnostic")
+
 try:
     import kodys.qt_compat
 except ImportError:
@@ -100,37 +105,63 @@ class LicenseActivationUI(QtGui.QDialog):
 
     def attempt_activation(self):
         user_key = self.txt_key.text().strip()
-        if license_core.verify_license(self.hardware_id, user_key):
-            license_core.save_license(user_key)
-            self.is_activated = True
+        logger.info(f"Activation Attempt Started. HWID: {self.hardware_id}, Key Provided: {user_key}")
+        
+        try:
+            isValid = license_core.verify_license(self.hardware_id, user_key)
+            logger.debug(f"Verification Check Complete. Result: {isValid}")
             
-            # Proactively background sync with Admin Server if reachable
-            # Path: http://127.0.0.1:8000/api/license/activate/
-            # (In production, replace with cloud URL)
-            threading.Thread(target=self.sync_activation_with_server, args=(user_key,), daemon=True).start()
-            
-            QtGui.QMessageBox.information(self, "Success", "Software activated successfully! Thank you.")
-            self.accept()
-        else:
-            QtGui.QMessageBox.critical(self, "Activation Failed", "Invalid License Key. Please contact Kodys Administrator and provide your Hardware ID.")
-            self.txt_key.clear()
+            if isValid:
+                logger.info("Key Verified Successfully. Attempting to commit license to local storage.")
+                try:
+                    license_core.save_license(user_key)
+                    logger.info("License successfully saved to local encrypted file.")
+                except Exception as save_err:
+                    logger.error(f"FATAL: Permission denied or IO error while saving license: {save_err}")
+                    logger.error(traceback.format_exc())
+                    QtGui.QMessageBox.critical(self, "System Error", f"Critical IO Failure: Could not write license file. Please run as Administrator.\n\nDetails: {save_err}")
+                    return
+
+                self.is_activated = True
+                
+                # Proactively background sync with Admin Server if reachable
+                logger.info("Dispatching background thread for Clinical Fleet Synchronization.")
+                sync_thread = threading.Thread(target=self.sync_activation_with_server, args=(user_key,), daemon=True)
+                sync_thread.start()
+                
+                logger.info("Activation sequence complete. Showing user success confirmation.")
+                QtGui.QMessageBox.information(self, "Success", "Software activated successfully! Thank you.")
+                self.accept()
+            else:
+                logger.warning(f"Key Mismatch! The provided key does not cryptographically match HWID {self.hardware_id}")
+                QtGui.QMessageBox.critical(self, "Activation Failed", "Invalid License Key. Please contact Kodys Administrator and provide your Hardware ID.")
+                self.txt_key.clear()
+        
+        except Exception as e:
+            logger.critical(f"UNCAUGHT SYSTEM CRASH during activation: {e}")
+            logger.critical(traceback.format_exc())
+            QtGui.QMessageBox.critical(self, "Critical Logic Failure", f"An unexpected system exception occurred during activation.\n\nError: {e}\n\nPlease share the 'kodys_debug.log' file with the technical team.")
 
     def sync_activation_with_server(self, key):
         """Attempts to notify the central office that this machine is now active."""
+        logger.info(f"Background Sync: Attempting to reach clinical admin server...")
         try:
             # We try local 8000 first, or any pre-configured central server IP
             server_urls = ["http://127.0.0.1:8000/api/license/activate/"]
             for url in server_urls:
                 try:
-                    requests.post(url, data={
+                    logger.debug(f"Trying sync target: {url}")
+                    response = requests.post(url, data={
                         'hardware_id': self.hardware_id,
                         'key': key
-                    }, timeout=5)
+                    }, timeout=8)
+                    logger.info(f"Sync Handshake Success. Server Response: {response.status_code} - {response.text}")
                     break 
-                except:
+                except Exception as req_err:
+                    logger.debug(f"Sync target {url} unreachable: {req_err}")
                     continue
-        except:
-            pass # Silent fail: do not block clinician if central server is offline
+        except Exception as global_sync_err:
+            logger.error(f"Global Sync Engine Failure: {global_sync_err}")
 
 def ensure_licensed(app_instance):
     """
