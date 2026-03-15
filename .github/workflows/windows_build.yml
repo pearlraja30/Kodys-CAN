@@ -26,7 +26,7 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install wkhtmltopdf
+    - name: Install System Dependencies
       run: choco install wkhtmltopdf
 
     - name: Install Dependencies
@@ -35,26 +35,17 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller packaging
 
-    - name: Locate CEF Binaries
-      id: cef
-      shell: bash
-      run: |
-        CEF_PATH=$(python -c "import cefpython3, os; print(os.path.dirname(cefpython3.__file__))")
-        echo "CEF_PATH=$CEF_PATH" >> $GITHUB_ENV
-        echo "Successfully located CEF at: $CEF_PATH"
-
     - name: Compile Python to EXE (PyInstaller)
+      shell: pwsh
       run: |
-        pyinstaller --noconfirm --onedir --windowed --name "Kodys Foot Clinik" ^
-          --add-data "app_config;app_config" ^
-          --add-data "kodys;kodys" ^
-          --add-data "app_assets;app_assets" ^
-          --add-data "${{ env.CEF_PATH }};cefpython3" ^
-          --hidden-import "cefpython3" ^
-          --hidden-import "PyQt5.QtWebEngineWidgets" ^
-          --hidden-import "PyQt5.QtPrintSupport" ^
-          --hidden-import "cv2" ^
-          --hidden-import "pywinusb.hid" ^
+        pyinstaller --noconfirm --onedir --windowed --name "Kodys Foot Clinik" `
+          --add-data "app_config;app_config" `
+          --add-data "kodys;kodys" `
+          --add-data "app_assets;app_assets" `
+          --hidden-import "PyQt5.QtWebEngineWidgets" `
+          --hidden-import "PyQt5.QtPrintSupport" `
+          --hidden-import "cv2" `
+          --hidden-import "pywinusb.hid" `
           application_code\run.py
 
     - name: Install Inno Setup
@@ -73,7 +64,7 @@ jobs:
 
     - name: Create Public Release Link
       uses: softprops/action-gh-release@v2
-      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
         tag_name: latest
         files: Output/*.exe
