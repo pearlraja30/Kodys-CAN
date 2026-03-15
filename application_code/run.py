@@ -32,7 +32,10 @@ except ImportError:
     kodys_license = None
 
 from serial import SerialException, SerialTimeoutException
-import winreg
+try:
+    import winreg
+except ImportError:
+    winreg = None
 import datetime
 from dateutil.relativedelta import relativedelta
 from PyQt4 import QtGui
@@ -109,7 +112,19 @@ if os.path.exists(libcef_dll):
     else:
         raise Exception("Unsupported python version: %s" % sys.version)
 else:
-    from cefpython3 import cefpython
+    try:
+        from cefpython3 import cefpython
+    except ImportError:
+        cefpython = None
+
+if cefpython is None:
+    # Cross-platform fallback: Create a dummy object to prevent crashes on Mac/Linux
+    class DummyCEF:
+        def __getattr__(self, name):
+            if name == "WindowUtils": return type('obj', (object,), {'OnSize': lambda *a: None, 'OnSetFocus': lambda *a: None})
+            return lambda *a, **k: None if name != "LOGSEVERITY_INFO" else 0
+        def GetModuleDirectory(self): return ""
+    cefpython = DummyCEF()
 
 
 def GetApplicationPath(file=None):
