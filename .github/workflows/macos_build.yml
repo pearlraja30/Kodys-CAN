@@ -1,4 +1,5 @@
 name: Build Kodys macOS App
+run-name: macOS Build - ${{ github.event.head_commit.message }}
 
 on:
   push:

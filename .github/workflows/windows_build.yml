@@ -1,4 +1,5 @@
 name: Build Kodys Windows Installer
+run-name: Windows Build - ${{ github.event.head_commit.message }}
 
 on:
   push:
