@@ -18,7 +18,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.14' # Matching your environment
+        python-version: '3.11' # Using a stable long-term version for CI reliability
 
     - name: Install Dependencies
       run: |
@@ -31,10 +31,12 @@ jobs:
         # We manually run the command from build_windows.bat but in a CI-friendly way
         pyinstaller --noconfirm --onedir --windowed --add-data "app_config;app_config" --add-data "kodys;kodys" application_code\run.py
 
+    - name: Install Inno Setup
+      run: choco install innosetup
+
     - name: Build Clinical Installer (Inno Setup)
-      uses: AykutSarac/iscc-action@v2
-      with:
-        filepath: application_code/kodys_inno_setup.iss
+      run: |
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" application_code/kodys_inno_setup.iss
 
     - name: Upload Installer Artifact
       uses: actions/upload-artifact@v4
