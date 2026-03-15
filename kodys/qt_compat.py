@@ -1,19 +1,22 @@
 """
-Kodys CAN - Advanced Enterprise Compatibility Shim
+Kodys CAN - Master Compatibility Engine (V3.0 - Ultra Robust)
 Unifies legacy PyQt4 and CEF logic into modern PyQt5.
-Target: Python 3.10 - 3.14+
 """
 import sys
 import types
 
+KODYS_SHIM_VERSION = "3.0.2"
+
 def create_module_shim(name, members):
     mod = types.ModuleType(name)
+    # We only copy clinical methods, strictly skipping ALL system attributes
     for k, v in members.items():
-        if not k.startswith('__'):
-            try:
-                setattr(mod, k, v)
-            except (AttributeError, TypeError):
-                pass
+        if k.startswith('_'):
+            continue
+        try:
+            setattr(mod, k, v)
+        except:
+            pass
     sys.modules[name] = mod
     return mod
 
@@ -24,21 +27,21 @@ try:
     import PyQt5.QtWebEngineWidgets as QtWebEngine
     import PyQt5.QtPrintSupport as QtPrint
 
-    # Create the modern Widget-aware QtGui for PyQt4 parity
+    # 1. PyQt4 Parity
     fake_gui_members = {}
     for mod in [QtGui, QtWidgets, QtPrint]:
         for attr in dir(mod):
-            fake_gui_members[attr] = getattr(mod, attr)
+            if not attr.startswith('_'):
+                fake_gui_members[attr] = getattr(mod, attr)
     
-    # Inject PyQt4 modules
-    create_module_shim('PyQt4.QtCore', {k: getattr(QtCore, k) for k in dir(QtCore)})
+    create_module_shim('PyQt4.QtCore', {k: getattr(QtCore, k) for k in dir(QtCore) if not k.startswith('_')})
     create_module_shim('PyQt4.QtGui', fake_gui_members)
     create_module_shim('PyQt4.QtWebKit', {'QWebView': QtWebEngine.QWebEngineView})
     create_module_shim('PyQt4', {'QtCore': sys.modules['PyQt4.QtCore'], 
                                 'QtGui': sys.modules['PyQt4.QtGui'],
                                 'QtWebKit': sys.modules['PyQt4.QtWebKit']})
 
-    # Inject CEFPython3 Shim
+    # 2. CEFPython3 Parity
     class CEFBrowserShim(QtWebEngine.QWebEngineView):
         def GetMainFrame(self): return self
         def LoadUrl(self, url): self.setUrl(QtCore.QUrl(url))
@@ -58,10 +61,13 @@ try:
         def WindowInfo(self): return type('obj', (object,), {})()
 
     cef_instance = CEFShim()
+    # PRE-FILTER the members to be absolutely certain __class__ never reaches the shim
+    cef_members = {k: getattr(cef_instance, k) for k in dir(cef_instance) if not k.startswith('_')}
+    
     create_module_shim('cefpython3', {'cefpython': cef_instance})
-    create_module_shim('cefpython3.cefpython', {k: getattr(cef_instance, k) for k in dir(cef_instance)})
+    create_module_shim('cefpython3.cefpython', cef_members)
 
-    print("Kodys: Enterprise Compatibility Engine Initialized (Shim 2.0).")
+    print(f"Kodys: Enterprise Compatibility Engine V{KODYS_SHIM_VERSION} Active.")
 
 except ImportError as e:
     print(f"Kodys Critical Extension Error: {e}")
