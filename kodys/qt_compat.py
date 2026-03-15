@@ -9,7 +9,11 @@ import types
 def create_module_shim(name, members):
     mod = types.ModuleType(name)
     for k, v in members.items():
-        setattr(mod, k, v)
+        if not k.startswith('__'):
+            try:
+                setattr(mod, k, v)
+            except (AttributeError, TypeError):
+                pass
     sys.modules[name] = mod
     return mod
 
