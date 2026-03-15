@@ -738,7 +738,7 @@ class TX_MASTER_GENERATED_LICENSES(models.Model):
     EMAIL = models.EmailField(blank=True, null=True)
     HARDWARE_ID = models.CharField(max_length=100)
     GENERATED_KEY = models.CharField(max_length=100)
-    STATUS = models.CharField(max_length=50, default="ACTIVE")
+    STATUS = models.CharField(max_length=50, default="PENDING_ACTIVATION")
     NOTES = models.TextField(blank=True, null=True)
     CREATED_ON = models.DateTimeField(auto_now_add=True)
     UPDATED_ON = models.DateTimeField(auto_now=True)

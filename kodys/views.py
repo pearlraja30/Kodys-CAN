@@ -186,6 +186,75 @@ def admin_license_dashboard(request):
     # Note: this requires admin/license_dashboard.html template which we just created.
     return render(request, "admin/license_dashboard.html", locals())
 
+@login_required(login_url=login_url)
+def delete_license(request, lic_id):
+    if not request.user.is_superuser:
+        return HttpResponse("Unauthorized", status=403)
+    try:
+        TX_MASTER_GENERATED_LICENSES.objects.get(id=lic_id).delete()
+    except:
+        pass
+    return HttpResponseRedirect(reverse("admin_license_dashboard"))
+
+@login_required(login_url=login_url)
+def toggle_license_status(request, lic_id):
+    if not request.user.is_superuser:
+        return HttpResponse("Unauthorized", status=403)
+    try:
+        lic = TX_MASTER_GENERATED_LICENSES.objects.get(id=lic_id)
+        # Cycle through clinical states
+        if lic.STATUS == "REVOKED":
+            lic.STATUS = "PENDING_ACTIVATION"
+        elif lic.STATUS == "ACTIVE":
+            lic.STATUS = "REVOKED"
+        else:
+            lic.STATUS = "ACTIVE"
+        lic.save()
+    except:
+        pass
+    return HttpResponseRedirect(reverse("admin_license_dashboard"))
+
+@login_required(login_url=login_url)
+def download_license_file(request, lic_id):
+    if not request.user.is_superuser:
+        return HttpResponse("Unauthorized", status=403)
+    try:
+        lic = TX_MASTER_GENERATED_LICENSES.objects.get(id=lic_id)
+        file_content = lic.GENERATED_KEY.strip().upper()
+        response = HttpResponse(file_content, content_type='application/octet-stream')
+        response['Content-Disposition'] = f'attachment; filename="kodys_license.dat"'
+        return response
+    except Exception as e:
+        return HttpResponse(f"Error: {e}", status=500)
+
+@csrf_exempt
+def report_activation_status(request):
+    """
+    API endpoint for clinical workstations to sync their activation status.
+    Called by the client app upon successful local key verification.
+    """
+    hw_id = request.POST.get('hardware_id', '').strip()
+    key = request.POST.get('key', '').strip()
+    
+    if hw_id and key:
+        try:
+            # Atomic update: find the pending license and activate it
+            lic = TX_MASTER_GENERATED_LICENSES.objects.get(
+                HARDWARE_ID=hw_id, 
+                GENERATED_KEY=key
+            )
+            if lic.STATUS == "PENDING_ACTIVATION":
+                lic.STATUS = "ACTIVE"
+                lic.save()
+                return JsonResponse({"status": "success", "message": "Clinical fleet status synchronized."})
+            return JsonResponse({"status": "already_active", "message": "System already marked as active."})
+        except:
+            return JsonResponse({"status": "error", "message": "Invalid hardware link detected."})
+            
+    return JsonResponse({"status": "error", "message": "Missing credentials."}, status=400)
+
+
+
 
 @login_required(login_url=login_url)
 def signout(request):

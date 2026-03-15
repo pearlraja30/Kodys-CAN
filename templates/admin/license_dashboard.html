@@ -10,7 +10,7 @@
         </div>
         <div class="system-status" style="display: flex; align-items: center; background: #fff; padding: 10px 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
             <div style="width: 10px; height: 10px; background: #10b981; border-radius: 50%; margin-right: 10px; box-shadow: 0 0 10px #10b981;"></div>
-            <span style="font-weight: 600; color: #1e293b; font-size: 14px;">Secure Engine V3.3 Active</span>
+            <span style="font-weight: 600; color: #1e293b; font-size: 14px;">Secure Engine V3.5 Active</span>
         </div>
     </div>
 
@@ -18,6 +18,17 @@
         .alert-box { padding: 15px 25px; border-radius: 12px; margin-bottom: 30px; border-left: 5px solid; }
         .alert-box.success { background: #ecfdf5; border-color: #10b981; color: #065f46; }
         .alert-box.error { background: #fef2f2; border-color: #ef4444; color: #991b1b; }
+        .btn-action { padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s; border: none; cursor: pointer; }
+        .btn-download { background: #eff6ff; color: #2563eb; }
+        .btn-download:hover { background: #2563eb; color: #fff; }
+        .btn-toggle { background: #fcfaff; color: #7c3aed; }
+        .btn-toggle:hover { background: #7c3aed; color: #fff; }
+        .btn-delete { background: #fff1f2; color: #e11d48; }
+        .btn-delete:hover { background: #e11d48; color: #fff; }
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; white-space: nowrap; }
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-revoked { background: #fee2e2; color: #991b1b; }
+        .status-pending { background: #fef9c3; color: #854d0e; }
     </style>
 
     {% if msg %}
@@ -62,17 +73,20 @@
         <div class="ledger-panel" style="background: #fff; border-radius: 20px; padding: 30px; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); overflow: hidden;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                 <h2 style="font-size: 18px; color: #1e293b; font-weight: 700; margin: 0;">Master License Archive</h2>
-                <span style="background: #eff6ff; color: #2563eb; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;">{{ licenses|length }} Active Keys</span>
+                <div style="display: flex; gap: 10px;">
+                    <span style="background: #eff6ff; color: #2563eb; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;">{{ licenses|length }} Total Keys</span>
+                </div>
             </div>
 
             <div class="table-container" style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
                     <thead>
                         <tr style="border-bottom: 2px solid #f1f5f9;">
                             <th style="padding: 12px; color: #64748b; font-weight: 700;">PROVISIONED TO</th>
                             <th style="padding: 12px; color: #64748b; font-weight: 700;">HARDWARE ID</th>
                             <th style="padding: 12px; color: #64748b; font-weight: 700;">LICENSE KEY</th>
-                            <th style="padding: 12px; color: #64748b; font-weight: 700;">DATE</th>
+                            <th style="padding: 12px; color: #64748b; font-weight: 700;">STATUS</th>
+                            <th style="padding: 12px; color: #64748b; font-weight: 700; text-align: right;">ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -80,17 +94,35 @@
                         <tr style="border-bottom: 1px solid #f8fafc; transition: background 0.2s;" onmouseover="this.style.background='#fbfdff'">
                             <td style="padding: 15px 12px;">
                                 <div style="font-weight: 700; color: #1e293b;">{{ lic.CLIENT_NAME }}</div>
-                                <div style="color: #94a3b8; font-size: 11px;">{{ lic.EMAIL }}</div>
+                                <div style="color: #94a3b8; font-size: 10px;">{{ lic.EMAIL }}</div>
                             </td>
                             <td style="padding: 15px 12px; font-family: monospace; color: #475569;">{{ lic.HARDWARE_ID }}</td>
                             <td style="padding: 15px 12px;">
                                 <span style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px; font-family: monospace; font-weight: 700; color: #008f8a; border: 1px solid #e2e8f0;">{{ lic.GENERATED_KEY }}</span>
                             </td>
-                            <td style="padding: 15px 12px; color: #94a3b8;">{{ lic.CREATED_ON|date:"M d, Y" }}</td>
+                            <td style="padding: 15px 12px;">
+                                <span class="status-badge 
+                                    {% if lic.STATUS == 'ACTIVE' %}status-active
+                                    {% elif lic.STATUS == 'PENDING_ACTIVATION' %}status-pending
+                                    {% else %}status-revoked{% endif %}">
+                                    {% if lic.STATUS == 'PENDING_ACTIVATION' %}PENDING SYNC{% else %}{{ lic.STATUS }}{% endif %}
+                                </span>
+                            </td>
+                            <td style="padding: 15px 12px; text-align: right; display: flex; gap: 5px; justify-content: flex-end;">
+                                <a href="{% url 'download_license_file' lic.id %}" class="btn-action btn-download" title="Download .dat file">
+                                    📥
+                                </a>
+                                <a href="{% url 'toggle_license_status' lic.id %}" class="btn-action btn-toggle" title="Revoke/Force Activate">
+                                    🔄
+                                </a>
+                                <a href="{% url 'delete_license' lic.id %}" class="btn-action btn-delete" onclick="return confirm('Permanently delete this license record?')" title="Delete Record">
+                                    🗑️
+                                </a>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" style="text-align: center; padding: 40px; color: #94a3b8; font-style: italic;">No licenses generated yet. System is ready.</td>
+                            <td colspan="5" style="text-align: center; padding: 40px; color: #94a3b8; font-style: italic;">No licenses generated yet. System is ready.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

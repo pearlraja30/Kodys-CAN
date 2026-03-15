@@ -1,5 +1,7 @@
 import os
 import sys
+import threading
+import requests
 try:
     import kodys.qt_compat
 except ImportError:
@@ -73,23 +75,62 @@ class LicenseActivationUI(QtGui.QDialog):
         self.btn_exit.setStyleSheet("background-color: #ccc; color: #333; padding: 8px 15px; border: none; font-size: 14px;")
         self.btn_exit.clicked.connect(self.reject)
 
+        self.btn_import = QtGui.QPushButton("Import License File (.dat)")
+        self.btn_import.setStyleSheet("background-color: #fff; color: #00bdb6; font-weight: bold; padding: 8px 15px; border: 1.5px solid #00bdb6; font-size: 14px;")
+        self.btn_import.clicked.connect(self.import_license_file)
+
         btn_layout.addStretch()
+        btn_layout.addWidget(self.btn_import)
         btn_layout.addWidget(self.btn_activate)
         btn_layout.addWidget(self.btn_exit)
         layout.addLayout(btn_layout)
 
         self.setLayout(layout)
 
+    def import_license_file(self):
+        file_path = QtGui.QFileDialog.getOpenFileName(self, "Select License File", "", "License Files (*.dat);;All Files (*)")
+        if file_path:
+            try:
+                with open(file_path, 'r') as f:
+                    key = f.read().strip()
+                self.txt_key.setText(key)
+                self.attempt_activation()
+            except Exception as e:
+                QtGui.QMessageBox.warning(self, "Import Error", f"Could not read the license file: {e}")
+
     def attempt_activation(self):
         user_key = self.txt_key.text().strip()
         if license_core.verify_license(self.hardware_id, user_key):
             license_core.save_license(user_key)
             self.is_activated = True
+            
+            # Proactively background sync with Admin Server if reachable
+            # Path: http://127.0.0.1:8000/api/license/activate/
+            # (In production, replace with cloud URL)
+            threading.Thread(target=self.sync_activation_with_server, args=(user_key,), daemon=True).start()
+            
             QtGui.QMessageBox.information(self, "Success", "Software activated successfully! Thank you.")
             self.accept()
         else:
             QtGui.QMessageBox.critical(self, "Activation Failed", "Invalid License Key. Please contact Kodys Administrator and provide your Hardware ID.")
             self.txt_key.clear()
+
+    def sync_activation_with_server(self, key):
+        """Attempts to notify the central office that this machine is now active."""
+        try:
+            # We try local 8000 first, or any pre-configured central server IP
+            server_urls = ["http://127.0.0.1:8000/api/license/activate/"]
+            for url in server_urls:
+                try:
+                    requests.post(url, data={
+                        'hardware_id': self.hardware_id,
+                        'key': key
+                    }, timeout=5)
+                    break 
+                except:
+                    continue
+        except:
+            pass # Silent fail: do not block clinician if central server is offline
 
 def ensure_licensed(app_instance):
     """

@@ -24,6 +24,11 @@ from django.conf import settings
 from kodys.views import *
 
 urlpatterns = [
+    path("admin/license/", admin_license_dashboard, name="admin_license_dashboard"),
+    path("admin/license/delete/<int:lic_id>/", delete_license, name="delete_license"),
+    path("admin/license/toggle/<int:lic_id>/", toggle_license_status, name="toggle_license_status"),
+    path("admin/license/download/<int:lic_id>/", download_license_file, name="download_license_file"),
+    path("api/license/activate/", report_activation_status, name="report_activation_status"),
     path("admin/", admin.site.urls),
     re_path(
         r"^site_media/(?P<path>.*)$",
@@ -40,7 +45,6 @@ urlpatterns = [
         django_static_view.serve,
         {"document_root": settings.STATIC_ROOT},
     ),
-    path("admin/license/", admin_license_dashboard, name="admin_license_dashboard"),
     path("license/", license_activation, name="license_activation"),
     path("about/", about, name="about"),
     path("signin/", signin, name="signin"),
