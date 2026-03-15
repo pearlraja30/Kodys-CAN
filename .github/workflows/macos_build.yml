@@ -36,8 +36,8 @@ jobs:
     - name: Install Python Dependencies
       run: |
         python3 -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller packaging
+        python3 -m pip install -r requirements.txt
+        python3 -m pip install pyinstaller packaging
 
     - name: Clean Python Cache
       run: |
@@ -46,19 +46,18 @@ jobs:
 
     - name: Compile macOS Bundle (PyInstaller)
       run: |
-        pyinstaller --noconfirm --onedir --windowed \
+        python3 -m PyInstaller --noconfirm --onedir --windowed \
             --add-data "app_config:app_config" \
             --add-data "kodys:kodys" \
             --add-data "app_assets:app_assets" \
             --add-data "config:config" \
             --add-data "db.sqlite3:." \
-            --exclude-module "pydoc" \
-            --exclude-module "jedi" \
-            --exclude-module "IPython" \
             --name "KodysCAN" \
             --hidden-import "PyQt5.QtWebEngineWidgets" \
             --hidden-import "PyQt5.QtPrintSupport" \
             --hidden-import "cv2" \
+            --hidden-import "setuptools" \
+            --hidden-import "distutils" \
             application_code/run.py
 
     - name: Strip Binaries (macOS Slimming)
