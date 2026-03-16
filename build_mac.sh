@@ -40,6 +40,8 @@ python3 -m PyInstaller --noconfirm --onedir --windowed \
     --hidden-import "cv2" \
     --hidden-import "setuptools" \
     --hidden-import "distutils" \
+    --hidden-import "fitz" \
+    --hidden-import "pymupdf" \
     application_code/run.py
 
 if [ $? -eq 0 ]; then

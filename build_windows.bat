@@ -39,6 +39,8 @@ python -m PyInstaller --noconfirm --onedir --windowed --name "Kodys Foot Clinik"
   --hidden-import "pywinusb.hid" ^
   --hidden-import "setuptools" ^
   --hidden-import "distutils" ^
+  --hidden-import "fitz" ^
+  --hidden-import "pymupdf" ^
   application_code\run.py
 
 if %errorlevel% neq 0 (

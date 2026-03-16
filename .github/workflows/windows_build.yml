@@ -64,6 +64,8 @@ jobs:
           --hidden-import "pywinusb.hid" `
           --hidden-import "setuptools" `
           --hidden-import "distutils" `
+          --hidden-import "fitz" `
+          --hidden-import "pymupdf" `
           application_code\run.py
 
     - name: Install Inno Setup
