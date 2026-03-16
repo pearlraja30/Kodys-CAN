@@ -57,12 +57,22 @@ Ask the customer to send you the **`kodys_debug.log`** file.
 
 ### B. macOS Security Bypass (Gatekeeper)
 MacOS may show: *"Apple could not verify..."* or *"Malware warning"*.
-**Standard Procedural Fix (v3.7):**
+
+**How to Trace/Find the Cause:**
+If you want to verify why it's blocked, open Terminal and run:
+`ls -l@ /Applications/KodysCAN.app`
+If you see **`com.apple.quarantine`**, macOS is intentionally holding the app in "Isolation" because it was downloaded from the web.
+
+**Standard Procedural Fix (v4.3):**
 1.  Open the **KodysCAN-Setup.dmg**.
-2.  Double-click the script named **`Click_Once_to_Enable.command`**.
-3.  Enter your Mac password if prompted (this clears the system block).
+2.  Double-click **`Click_Once_to_Enable.command`**.
+3.  Enter your Mac password (it will say *"Cleaning Quarantine"*).
 4.  **Launch KodysCAN normally.**
-*Note: If you don't use the script, you must **Right-Click -> Open** on the app icon to bypass the one-time Apple security check.*
+
+**Failsafe (if script fails):**
+1.  Open **System Settings** -> **Privacy & Security**.
+2.  Scroll to **General**.
+3.  Click **"Open Anyway"** appearing at the bottom.
 
 ### C. Problem / Solution Ledger
 | Incident | Symptom | Fix |

@@ -74,7 +74,7 @@ jobs:
         cp -r "dist/KodysCAN.app" dmg_root/
         
         # Create a "Standard Procedural" Command to bypass Gatekeeper
-        printf '#!/bin/bash\necho "🛡️ Kodys CLINICAL: SECURE DEPLOYMENT PROTOCOL"\necho "------------------------------------------------"\necho "Initializing Clinical Sandboxing..."\nsudo xattr -d com.apple.quarantine "/Applications/KodysCAN.app" 2>/dev/null || xattr -d com.apple.quarantine "$(dirname "$0")/KodysCAN.app" 2>/dev/null\necho "✅ Security handshake complete. You can now launch KodysCAN normally."\n' > dmg_root/Click_Once_to_Enable.command
+        printf '#!/bin/bash\necho "🛡️ Kodys CLINICAL: SECURE DEPLOYMENT PROTOCOL"\necho "------------------------------------------------"\necho "Initializing Clinical Sandboxing & Cleaning Quarantine..."\n\n# Recursive removal of the quarantine flag (fixes deep .so and .dylib blocks)\nsudo xattr -rd com.apple.quarantine "/Applications/KodysCAN.app" 2>/dev/null\nsudo xattr -rd com.apple.quarantine "$(dirname "$0")/KodysCAN.app" 2>/dev/null\n\necho "✅ Security handshake complete."\necho "------------------------------------------------"\necho "IMPORTANT: If you still see the malware warning:"\necho "1. Go to System Settings -> Privacy & Security"\necho "2. Scroll down to General"\necho "3. Click [Open Anyway] next to KodysCAN."\necho "------------------------------------------------"\necho "You can now launch KodysCAN normally."\nread -p "Press Enter to exit..."\n' > dmg_root/Click_Once_to_Enable.command
         chmod +x dmg_root/Click_Once_to_Enable.command
         
         hdiutil create -volname "KodysCAN-Setup" -srcfolder dmg_root -ov -format ULMO KodysCAN_macOS_Setup.dmg
