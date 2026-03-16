@@ -34,7 +34,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install -r requirements.txt
-        python -m pip install pyinstaller packaging
+        python -m pip install pyinstaller packaging setuptools
 
     - name: Clean Python Cache
       run: |
@@ -93,6 +93,10 @@ jobs:
           --hidden-import "django.contrib.sessions" `
           --hidden-import "django.contrib.messages" `
           --hidden-import "django.contrib.staticfiles" `
+          --collect-all "heartpy" `
+          --collect-all "pyhrv" `
+          --collect-all "pkg_resources" `
+          --collect-all "setuptools" `
           application_code\run.py
 
     - name: Run Bundle Sanity Audit (Pre-Installer Check)

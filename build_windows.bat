@@ -68,6 +68,10 @@ python -m PyInstaller --noconfirm --onedir --windowed --name "Kodys Foot Clinik"
   --hidden-import "django.contrib.sessions" ^
   --hidden-import "django.contrib.messages" ^
   --hidden-import "django.contrib.staticfiles" ^
+  --collect-all "heartpy" ^
+  --collect-all "pyhrv" ^
+  --collect-all "pkg_resources" ^
+  --collect-all "setuptools" ^
   application_code\run.py
 
 if %errorlevel% neq 0 (

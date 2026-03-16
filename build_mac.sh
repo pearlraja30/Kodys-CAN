@@ -69,6 +69,10 @@ python3 -m PyInstaller --noconfirm --onedir --windowed \
     --hidden-import "django.contrib.sessions" \
     --hidden-import "django.contrib.messages" \
     --hidden-import "django.contrib.staticfiles" \
+    --collect-all "heartpy" \
+    --collect-all "pyhrv" \
+    --collect-all "pkg_resources" \
+    --collect-all "setuptools" \
     application_code/run.py
 
 if [ $? -eq 0 ]; then
