@@ -68,16 +68,51 @@ jobs:
         find "dist/KodysCAN.app" -name "*.dylib" -exec codesign --force --options runtime --deep --sign - {} + || true
         codesign --force --options runtime --deep --sign - "dist/KodysCAN.app"
 
-    - name: Create DMG with One-Click Bypass Script
+    - name: Create DMG Setup
       run: |
-        mkdir -p dmg_root
-        cp -r "dist/KodysCAN.app" dmg_root/
+        mkdir -p dmg_source
+        cp -r "dist/KodysCAN.app" dmg_source/
         
-        # Create a "Standard Procedural" Command to bypass Gatekeeper
-        printf '#!/bin/bash\necho "🛡️ Kodys CLINICAL: SECURE DEPLOYMENT PROTOCOL"\necho "------------------------------------------------"\necho "Initializing Clinical Sandboxing & Cleaning Quarantine..."\n\n# Recursive removal of the quarantine flag (fixes deep .so and .dylib blocks)\nsudo xattr -rd com.apple.quarantine "/Applications/KodysCAN.app" 2>/dev/null\nsudo xattr -rd com.apple.quarantine "$(dirname "$0")/KodysCAN.app" 2>/dev/null\n\necho "✅ Security handshake complete."\necho "------------------------------------------------"\necho "IMPORTANT: If you still see the malware warning:"\necho "1. Go to System Settings -> Privacy & Security"\necho "2. Scroll down to General"\necho "3. Click [Open Anyway] next to KodysCAN."\necho "------------------------------------------------"\necho "You can now launch KodysCAN normally."\nread -p "Press Enter to exit..."\n' > dmg_root/Click_Once_to_Enable.command
-        chmod +x dmg_root/Click_Once_to_Enable.command
+        # Create the bypass script via heredoc for better reliability
+        cat <<'EOF' > dmg_source/ENABLE_SECURITY.command
+#!/bin/bash
+clear
+echo "🛡️ Kodys CLINICAL: SECURE DEPLOYMENT PROTOCOL"
+echo "------------------------------------------------"
+echo "Initializing Clinical Sandboxing & Cleaning Quarantine..."
+
+# Get application location (relative to script or absolute path)
+APP_PATH="$(dirname "$0")/KodysCAN.app"
+ALT_PATH="/Applications/KodysCAN.app"
+
+if [ -d "$APP_PATH" ]; then
+    TARGET="$APP_PATH"
+elif [ -d "$ALT_PATH" ]; then
+    TARGET="$ALT_PATH"
+else
+    echo "❌ ERROR: KodysCAN.app not found. Please drag it to Applications first."
+    read -p "Press Enter to exit..."
+    exit 1
+fi
+
+echo "Cleaning: $TARGET"
+sudo xattr -rd com.apple.quarantine "$TARGET" 2>/dev/null
+
+echo "✅ Security handshake complete."
+echo "------------------------------------------------"
+echo "You can now launch KodysCAN normally."
+echo "If still blocked, go to: System Settings -> Privacy & Security -> Open Anyway"
+echo "------------------------------------------------"
+read -p "Press Enter to finish..."
+EOF
+        chmod +x dmg_source/ENABLE_SECURITY.command
         
-        hdiutil create -volname "KodysCAN-Setup" -srcfolder dmg_root -ov -format ULMO KodysCAN_macOS_Setup.dmg
+        # Sync file system to prevent "Resource Busy" errors
+        sync
+        sleep 5
+        
+        # Use UDZO (Compressed) which is more robust for CI environments
+        hdiutil create -volname "KodysCAN-Setup" -srcfolder dmg_source -ov -format UDZO KodysCAN_macOS_Setup.dmg
 
     - name: Upload macOS Artifact
       uses: actions/upload-artifact@v4
