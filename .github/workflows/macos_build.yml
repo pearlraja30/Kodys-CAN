@@ -105,7 +105,7 @@ jobs:
         # On macOS, libraries are in KodysCAN.app/Contents/Resources or the dist root for --onedir
         export PYTHONPATH="dist/KodysCAN.app/Contents/Resources:dist"
         python3 application_code/sanity_check.py
-        echo "✅ BUNDLE AUDIT PASSED: All clinical assets verified."
+        echo "BUNDLE AUDIT PASSED: All clinical assets verified."
 
     - name: Ad-Hoc Code Sign (Apple Hardened Runtime)
       run: |
