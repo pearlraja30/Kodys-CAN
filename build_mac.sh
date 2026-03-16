@@ -42,6 +42,8 @@ python3 -m PyInstaller --noconfirm --onedir --windowed \
     --hidden-import "distutils" \
     --hidden-import "fitz" \
     --hidden-import "pymupdf" \
+    --hidden-import "cryptography.fernet" \
+    --hidden-import "cryptography.hazmat.backends" \
     application_code/run.py
 
 if [ $? -eq 0 ]; then

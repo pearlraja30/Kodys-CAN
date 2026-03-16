@@ -41,6 +41,8 @@ python -m PyInstaller --noconfirm --onedir --windowed --name "Kodys Foot Clinik"
   --hidden-import "distutils" ^
   --hidden-import "fitz" ^
   --hidden-import "pymupdf" ^
+  --hidden-import "cryptography.fernet" ^
+  --hidden-import "cryptography.hazmat.backends" ^
   application_code\run.py
 
 if %errorlevel% neq 0 (

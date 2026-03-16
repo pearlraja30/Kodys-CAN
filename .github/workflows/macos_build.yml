@@ -62,6 +62,8 @@ jobs:
             --hidden-import "distutils" \
             --hidden-import "fitz" \
             --hidden-import "pymupdf" \
+            --hidden-import "cryptography.fernet" \
+            --hidden-import "cryptography.hazmat.backends" \
             application_code/run.py
 
     - name: Ad-Hoc Code Sign (Apple Hardened Runtime)
