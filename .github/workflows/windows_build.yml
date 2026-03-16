@@ -98,14 +98,14 @@ jobs:
     - name: Run Bundle Sanity Audit (Pre-Installer Check)
       shell: pwsh
       run: |
-        echo "🧐 Auditing compiled Windows bundle for clinical integrity..."
+        echo "Auditing compiled Windows bundle for clinical integrity..."
         $env:PYTHONPATH = "dist/Kodys Foot Clinik"
         python application_code/sanity_check.py
         if ($LASTEXITCODE -ne 0) {
-          echo "🚨 BUNDLE AUDIT FAILED: The built binary is missing critical modules."
+          echo "BUNDLE AUDIT FAILED: The built binary is missing critical modules."
           exit 1
         }
-        echo "✅ BUNDLE AUDIT PASSED: All clinical assets verified."
+        echo "BUNDLE AUDIT PASSED: All clinical assets verified."
 
     - name: Install Inno Setup
       run: choco install innosetup

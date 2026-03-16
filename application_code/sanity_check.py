@@ -3,7 +3,7 @@ import os
 import traceback
 
 def run_sanity_check():
-    print("🛡️ Kodys CLINICAL: COMPREHENSIVE BUNDLE AUDIT (v5.0)")
+    print("[AUDIT] Kodys CLINICAL: COMPREHENSIVE BUNDLE AUDIT (v5.1)")
     print("------------------------------------------------")
     
     # List of critical libraries that must be present in the bundle
@@ -69,25 +69,25 @@ def run_sanity_check():
         try:
             # Dynamically import the module
             __import__(module_name)
-            print(f"✅ PASSED: {module_name}")
+            print(f"[PASSED]: {module_name}")
         except ImportError as e:
-            print(f"❌ FAILED: {module_name} (Error: {e})")
+            print(f"[FAILED]: {module_name} (Error: {e})")
             failed_modules.append((module_name, str(e)))
         except Exception as e:
             # Handle cases where sub-modules like matplotlib.pyplot might fail due to lack of display
             # during build-time checks, but are technically 'present'
             if "Display" in str(e) or "Tkinter" in str(e) or "environment" in str(e):
-                print(f"⚠️  WARNING: {module_name} (Present, but cannot initialize in build environment)")
+                print(f"[WARNING]: {module_name} (Present, but cannot initialize in build environment)")
             else:
-                print(f"❌ ERROR: {module_name} (Unexpected error: {e})")
+                print(f"[ERROR]: {module_name} (Unexpected error: {e})")
                 failed_modules.append((module_name, str(e)))
 
     print("------------------------------------------------")
     if not failed_modules:
-        print("✅ AUDIT COMPLETE: All clinical libraries are correctly bundled.")
+        print("[SUCCESS] AUDIT COMPLETE: All clinical libraries are correctly bundled.")
         sys.exit(0)
     else:
-        print(f"🚨 AUDIT FAILED: {len(failed_modules)} modules are missing or broken!")
+        print(f"[FAILED] AUDIT FAILED: {len(failed_modules)} modules are missing or broken!")
         for mod, err in failed_modules:
             print(f"  -> {mod}: {err}")
         print("\nFATAL: Bundle validation failed. Build aborted to prevent deployment of broken software.")
