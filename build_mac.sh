@@ -19,9 +19,9 @@ source .venv_mac/bin/activate
 # Step 3: Install Dependencies
 echo ""
 echo "[Step 2] Installing requirements..."
-pip install --upgrade pip
-pip install -r requirements.txt
-pip install pyinstaller
+python3 -m pip install --upgrade pip setuptools==69.0.3 wheel
+python3 -m pip install -r requirements.txt
+python3 -m pip install pyinstaller packaging
 
 # Step 4: Run PyInstaller
 echo ""
@@ -73,6 +73,8 @@ python3 -m PyInstaller --noconfirm --onedir --windowed \
     --collect-all "pyhrv" \
     --collect-all "pkg_resources" \
     --collect-all "setuptools" \
+    --copy-metadata "setuptools" \
+    --copy-metadata "heartpy" \
     application_code/run.py
 
 if [ $? -eq 0 ]; then

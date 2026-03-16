@@ -35,9 +35,11 @@ jobs:
 
     - name: Install Python Dependencies
       run: |
-        python3 -m pip install --upgrade pip
+        python3 -m pip install --upgrade pip setuptools==69.0.3 wheel
         python3 -m pip install -r requirements.txt
         python3 -m pip install pyinstaller packaging
+        # Diagnostic check to ensure pkg_resources is actually in the build environment
+        python3 -c "import pkg_resources; print(f'Environment Check: pkg_resources found at {pkg_resources.__file__}')"
 
     - name: Clean Python Cache
       run: |
@@ -93,11 +95,13 @@ jobs:
             --collect-all "pyhrv" \
             --collect-all "pkg_resources" \
             --collect-all "setuptools" \
+            --copy-metadata "setuptools" \
+            --copy-metadata "heartpy" \
             application_code/run.py
 
     - name: Run Bundle Sanity Audit (Pre-Installer Check)
       run: |
-        echo "🧐 Auditing compiled macOS bundle for clinical integrity..."
+        echo "Auditing compiled macOS bundle for clinical integrity..."
         # On macOS, libraries are in KodysCAN.app/Contents/Resources or the dist root for --onedir
         export PYTHONPATH="dist/KodysCAN.app/Contents/Resources:dist"
         python3 application_code/sanity_check.py

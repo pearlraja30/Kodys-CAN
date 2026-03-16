@@ -20,8 +20,9 @@ call .venv\Scripts\activate.bat
 :: Step 2: Install dependencies
 echo.
 echo [Step 2] Installing project requirements and PyInstaller...
+python -m pip install --upgrade pip setuptools==69.0.3 wheel
 pip install -r requirements.txt
-pip install pyinstaller
+pip install pyinstaller packaging
 
 :: Step 3: Run PyInstaller to create the Windows .exe
 echo.
@@ -72,6 +73,8 @@ python -m PyInstaller --noconfirm --onedir --windowed --name "Kodys Foot Clinik"
   --collect-all "pyhrv" ^
   --collect-all "pkg_resources" ^
   --collect-all "setuptools" ^
+  --copy-metadata "setuptools" ^
+  --copy-metadata "heartpy" ^
   application_code\run.py
 
 if %errorlevel% neq 0 (

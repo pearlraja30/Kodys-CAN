@@ -32,9 +32,11 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        python -m pip install --upgrade pip
+        python -m pip install --upgrade pip setuptools==69.0.3 wheel
         python -m pip install -r requirements.txt
-        python -m pip install pyinstaller packaging setuptools
+        python -m pip install pyinstaller packaging
+        # Diagnostic check to ensure pkg_resources is actually in the build environment
+        python -c "import pkg_resources; print(f'Environment Check: pkg_resources found at {pkg_resources.__file__}')"
 
     - name: Clean Python Cache
       run: |
@@ -97,6 +99,8 @@ jobs:
           --collect-all "pyhrv" `
           --collect-all "pkg_resources" `
           --collect-all "setuptools" `
+          --copy-metadata "setuptools" `
+          --copy-metadata "heartpy" `
           application_code\run.py
 
     - name: Run Bundle Sanity Audit (Pre-Installer Check)
