@@ -19,6 +19,16 @@ import os
 DEBUG_MODE = "--debug" in sys.argv
 LOG_FILE = os.path.join(os.path.expanduser("~"), "kodys_debug.log") if getattr(sys, 'frozen', False) else "kodys_debug.log"
 
+# --- Multi-Platform Root Discovery ---
+if getattr(sys, 'frozen', False):
+    ROOT_DIR = os.path.dirname(sys.executable)
+    # Ensure the bundle root is in the path for subprocesses
+    if ROOT_DIR not in sys.path:
+        sys.path.insert(0, ROOT_DIR)
+else:
+    # Project root is two levels up from application_code/run.py
+    ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # --- Centralized Writable Data Path for Clinical Sandboxing ---
 if getattr(sys, 'frozen', False):
     if sys.platform == 'win32':
@@ -26,7 +36,7 @@ if getattr(sys, 'frozen', False):
     else:
         KODYS_DATA_DIR = os.path.join(os.path.expanduser("~"), ".kodys_can")
 else:
-    KODYS_DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+    KODYS_DATA_DIR = ROOT_DIR
 
 if not os.path.exists(KODYS_DATA_DIR):
     os.makedirs(KODYS_DATA_DIR)
@@ -307,9 +317,9 @@ class MainFrame(QtGui.QWidget):
                 logger.info("Internal Clinical Server Connected Successfully.")
                 break
             
-            # Check for timeout (45 seconds)
-            if time.time() - start_wait > 45:
-                logger.error("FATAL: Clinical Server timed out after 45 seconds.")
+            # Check for timeout (60 seconds)
+            if time.time() - start_wait > 60:
+                logger.error("FATAL: Clinical Server timed out after 60 seconds.")
                 QtGui.QMessageBox.critical(
                     self, 
                     "System Error", 
@@ -2508,12 +2518,18 @@ if __name__ == "__main__":
     logger.info(f"Process ID: {os.getpid()} | Args: {sys.argv}")
 
     # --- INFINTIE LOOP GUARD & SERVER DISPATCHER ---
+    # Force use of app_config as the project name
+    CLI_PROJECT_NAME = "app_config"
+    
     if len(sys.argv) > 1 and "runserver" in sys.argv:
         logger.info("Background Mode: Initializing Clinical Server...")
         try:
-            # We must manually set up the Django environment here because the 
-            # frozen EXE is acting as the interpreter.
-            os.environ.setdefault('DJANGO_SETTINGS_MODULE', f'{project_dir_name}.settings')
+            # Force absolute path discovery in subprocess
+            if ROOT_DIR not in sys.path:
+                sys.path.insert(0, ROOT_DIR)
+            
+            # Use direct assignment to override any existing 'app' settings
+            os.environ['DJANGO_SETTINGS_MODULE'] = 'app_config.settings'
             import django
             django.setup()
             from django.core.management import execute_from_command_line
@@ -2532,7 +2548,7 @@ if __name__ == "__main__":
         logger.info("Primary Mode: Launching Clinical GUI...")
 
     config_file_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "config", "config.json")
+        os.path.join(ROOT_DIR, "config", "config.json")
     )
     logger.info(f"Looking for config at: {config_file_path}")
     project_dir_name = "app_config" # Robust default fallback
@@ -2546,13 +2562,13 @@ if __name__ == "__main__":
                 assets_dir_name = django_app_data["assets_dir_name"]
                 assets_media_dir_name = django_app_data["assets_media_dir_name"]
                 project_dir_path = os.path.abspath(
-                    os.path.join(os.path.dirname(__file__), "..", project_dir_name)
+                    os.path.join(ROOT_DIR, project_dir_name)
                 )
                 assets_dir_path = os.path.abspath(
-                    os.path.join(os.path.dirname(__file__), "..", assets_dir_name)
+                    os.path.join(ROOT_DIR, assets_dir_name)
                 )
                 assets_media_dir_path = os.path.abspath(
-                    os.path.join(os.path.dirname(__file__), "..", assets_media_dir_name)
+                    os.path.join(ROOT_DIR, assets_media_dir_name)
                 )
                 window_data = data["window"]
                 dev_tools_menu_enabled = bool(
@@ -2565,7 +2581,7 @@ if __name__ == "__main__":
                 window_title = window_data["title"]
                 icon_name = window_data["icon"]
                 icon_name = os.path.abspath(
-                    os.path.join(os.path.dirname(__file__), "..", "config", icon_name)
+                    os.path.join(ROOT_DIR, "config", icon_name)
                 )
                 fullscreen_allowed = bool(
                     util.strtobool(window_data["fullscreen_allowed"].lower())
@@ -2580,9 +2596,9 @@ if __name__ == "__main__":
     compileall.compile_dir(project_dir_path if 'project_dir_path' in locals() else project_dir_name, force=True)
     
     # Robust Subprocess Startup for Frozen Environment
-    manage_path = os.path.join(os.path.dirname(__file__), "..", project_dir_name, "manage.py")
+    manage_path = os.path.join(ROOT_DIR, CLI_PROJECT_NAME, "manage.py")
     if not os.path.exists(manage_path):
-        manage_path = os.path.join(os.path.dirname(__file__), "..", project_dir_name, "manage.pyc")
+        manage_path = os.path.join(ROOT_DIR, CLI_PROJECT_NAME, "manage.pyc")
     
     # Only spawn the server if we are the PRIMARY GUI process
     if not (len(sys.argv) > 1 and "runserver" in sys.argv):
