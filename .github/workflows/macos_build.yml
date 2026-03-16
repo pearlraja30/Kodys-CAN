@@ -60,15 +60,11 @@ jobs:
             --hidden-import "distutils" \
             application_code/run.py
 
-    - name: Diagnose Bundle Size
+    - name: Ad-Hoc Code Sign (macOS Integrity)
       run: |
-        du -sh dist/KodysCAN.app
-        find dist/KodysCAN.app -name "*" -size +10M -exec ls -lh {} + | sort -hr
-
-    - name: Strip Binaries (macOS Slimming)
-      run: |
-        find "dist/KodysCAN.app" -name "*.so" -exec strip -x {} + || true
-        find "dist/KodysCAN.app" -name "*.dylib" -exec strip -x {} + || true
+        find "dist/KodysCAN.app" -name "*.so" -exec codesign --force --deep --sign - {} + || true
+        find "dist/KodysCAN.app" -name "*.dylib" -exec codesign --force --deep --sign - {} + || true
+        codesign --force --deep --sign - "dist/KodysCAN.app"
 
     - name: Create DMG Disk Image
       run: |

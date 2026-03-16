@@ -54,7 +54,15 @@ Ask the customer to send you the file: **`kodys_debug.log`**
 
 Search the log for keywords: `[ERROR]`, `FATAL`, or `Key Mismatch`.
 
-### B. Common Issues & Solutions
+### C. macOS Security Bypass (Gatekeeper)
+Because the app is built for clinical environments without an Apple Store subscription, macOS will show a message: *"Apple could not verify..."*
+**Workaround:**
+1.  **Right-click** (or Command-Click) the application icon.
+2.  Select **Open** from the menu.
+3.  A now-different window will appear with an **Open** button. Click it.
+4.  This only needs to be done **once**. Subsequent launches will work normally.
+
+### D. Common Issues & Solutions
 | Incident | Symptom | Fix |
 | :--- | :--- | :--- |
 | **Silent Hang** | Button clicked, nothing happens. | Check `kodys_debug.log` for **Permission Denied**. Ask user to **Run as Administrator**. |

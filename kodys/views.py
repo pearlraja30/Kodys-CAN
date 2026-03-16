@@ -147,8 +147,8 @@ def admin_license_dashboard(request):
     if not request.user.is_superuser:
         return HttpResponse("You are not authorized to view the Enterprise Admin Terminal.", status=403)
         
-    msg = ""
-    msg_class = ""
+    msg = request.GET.get('msg_text', '')
+    msg_class = request.GET.get('msg_class', '')
     
     if request.method == "POST":
         client_name = request.POST.get('client_name', '').strip()
@@ -158,32 +158,42 @@ def admin_license_dashboard(request):
         
         if client_name and hardware_id:
             try:
+                # Clean HWID to ensure de-duplication works even with formatting variance
+                clean_hwid = hardware_id.replace(" ", "").replace("-", "").upper()
+                # Re-format it for consistent storage
+                formatted_hwid = f"KODY-{clean_hwid[4:8]}-{clean_hwid[8:12]}-{clean_hwid[12:16]}" if clean_hwid.startswith("KODY") else hardware_id
+                
                 from . import license_core
                 # Cryptographically generate hardware-linked code
                 gen_key = license_core.generate_expected_license(hardware_id)
                 
-                # Save to Master License Tracking Book
-                TX_MASTER_GENERATED_LICENSES.objects.create(
-                    CLIENT_NAME=client_name,
+                # Atomic de-duplication: update existing record for this HWID or create a new one
+                # We match on HARDWARE_ID to prevent duplicates
+                obj, created = TX_MASTER_GENERATED_LICENSES.objects.update_or_create(
                     HARDWARE_ID=hardware_id,
-                    EMAIL=email,
-                    NOTES=notes,
-                    GENERATED_KEY=gen_key
+                    defaults={
+                        'CLIENT_NAME': client_name,
+                        'EMAIL': email,
+                        'NOTES': notes,
+                        'GENERATED_KEY': gen_key,
+                        # If we are re-provisioning an existing HWID, we might want to keep status 
+                        # but usually it stays as is. Or reset to PENDING if name changed.
+                    }
                 )
-                msg = f"SUCCESS: Generated key {gen_key} for {client_name}"
-                msg_class = "success"
+                
+                success_msg = f"SUCCESS: Generated key {gen_key} for {client_name}"
+                return HttpResponseRedirect(f"{reverse('admin_license_dashboard')}?msg_text={success_msg}&msg_class=success")
             except Exception as e:
-                msg = f"ERROR: Failed to generate license: {str(e)}"
-                msg_class = "error"
+                error_msg = f"ERROR: Failed to generate license: {str(e)}"
+                return HttpResponseRedirect(f"{reverse('admin_license_dashboard')}?msg_text={error_msg}&msg_class=error")
         else:
-            msg = "ERROR: Missing required details (Client Name or Hardware ID)."
-            msg_class = "error"
+            error_msg = "ERROR: Missing required details (Client Name or Hardware ID)."
+            return HttpResponseRedirect(f"{reverse('admin_license_dashboard')}?msg_text={error_msg}&msg_class=error")
             
     # Fetch all licenses for real-time monitoring
     licenses = TX_MASTER_GENERATED_LICENSES.objects.all().order_by('-CREATED_ON')
     
     logger.info(ulo.end_log(request, fn))
-    # Note: this requires admin/license_dashboard.html template which we just created.
     return render(request, "admin/license_dashboard.html", locals())
 
 @login_required(login_url=login_url)
