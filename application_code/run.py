@@ -307,19 +307,27 @@ class MainFrame(QtGui.QWidget):
         windowInfo = cefpython.WindowInfo()
         windowInfo.SetAsChild(int(self.winId()))
         self.parent = parent
-        # Wait for the internal clinical server with a 45-second safety timeout
+        # Wait for the internal clinical server with a robust diagnostic loop
         start_wait = time.time()
+        last_log = 0
         while True:
+            elapsed = time.time() - start_wait
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.5)
             result = sock.connect_ex(("127.0.0.1", 5423))
             sock.close()
+            
             if result == 0:
                 logger.info("Internal Clinical Server Connected Successfully.")
                 break
             
-            # Check for timeout (60 seconds)
-            if time.time() - start_wait > 60:
-                logger.error("FATAL: Clinical Server timed out after 60 seconds.")
+            if int(elapsed) > last_log:
+                logger.debug(f"Handshake Logic: Waiting for server port 5423... ({int(elapsed)}s elapsed, status={result})")
+                last_log = int(elapsed)
+            
+            # Check for timeout (expanded safety buffer)
+            if elapsed > 65:
+                logger.error("FATAL: Clinical Server timed out after 65 seconds.")
                 QtGui.QMessageBox.critical(
                     self, 
                     "System Error", 
@@ -2612,11 +2620,27 @@ if __name__ == "__main__":
                 startupinfo = subprocess.STARTUPINFO()
                 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             
+            # Pipe stdout/stderr to diagnostics log to catch startup crashes
             proc = subprocess.Popen(
                 cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
                 startupinfo=startupinfo,
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' and not DEBUG_MODE else 0
             )
+            
+            # Launch background thread to mirror clinical logs
+            import threading
+            def pipe_logger(pipe):
+                for line in iter(pipe.readline, ''):
+                    logger.info(f"[Server] {line.strip()}")
+                pipe.close()
+            
+            t = threading.Thread(target=pipe_logger, args=(proc.stdout,), daemon=True)
+            t.start()
+            
             logger.info(f"Clinical Server Process Started (PID: {proc.pid})")
         except Exception as e:
             logger.error(f"FATAL: Clinical Server failed to launch: {e}")
@@ -2641,7 +2665,10 @@ if __name__ == "__main__":
         "context_menu": {"enabled": dev_tools_menu_enabled},
     }
 
-    switches = {"remote_debugging_port": "http://127.0.0.1:5423"}
+    switches = {
+        "remote-debugging-port": "9222",
+        "disable-gpu": "" if sys.platform == "win32" else "1"
+    }
     cefpython.Initialize(settings, switches)
 
     app = CefApplication(sys.argv)
