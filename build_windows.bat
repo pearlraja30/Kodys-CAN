@@ -43,6 +43,30 @@ python -m PyInstaller --noconfirm --onedir --windowed --name "Kodys Foot Clinik"
   --hidden-import "pymupdf" ^
   --hidden-import "cryptography.fernet" ^
   --hidden-import "cryptography.hazmat.backends" ^
+  --hidden-import "heartpy" ^
+  --hidden-import "pyhrv" ^
+  --hidden-import "pyhrv.time_domain" ^
+  --hidden-import "pyhrv.frequency_domain" ^
+  --hidden-import "pyhrv.nonlinear" ^
+  --hidden-import "peakutils" ^
+  --hidden-import "scipy.signal" ^
+  --hidden-import "scipy.optimize" ^
+  --hidden-import "scipy.interpolate" ^
+  --hidden-import "scipy.stats" ^
+  --hidden-import "matplotlib" ^
+  --hidden-import "matplotlib.pyplot" ^
+  --hidden-import "pandas" ^
+  --hidden-import "serial" ^
+  --hidden-import "xlsxwriter" ^
+  --hidden-import "pdfkit" ^
+  --hidden-import "requests" ^
+  --hidden-import "psutil" ^
+  --hidden-import "django.contrib.admin" ^
+  --hidden-import "django.contrib.auth" ^
+  --hidden-import "django.contrib.contenttypes" ^
+  --hidden-import "django.contrib.sessions" ^
+  --hidden-import "django.contrib.messages" ^
+  --hidden-import "django.contrib.staticfiles" ^
   application_code\run.py
 
 if %errorlevel% neq 0 (
