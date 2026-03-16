@@ -73,46 +73,48 @@ jobs:
         mkdir -p dmg_source
         cp -r "dist/KodysCAN.app" dmg_source/
         
-        # Create the bypass script via HEREDOC
-        # All lines below are indented to satisfy YAML syntax
-        cat <<'EOF' > dmg_source/ENABLE_SECURITY.command
-        #!/bin/bash
+        # Define the bypass script using a robust multi-line variable
+        # This keeps the YAML structure clean and avoids heredoc indentation errors
+        SCRIPT_CONTENT="#!/bin/bash
         clear
-        echo "🛡️ Kodys CLINICAL: SECURE DEPLOYMENT PROTOCOL"
-        echo "------------------------------------------------"
-        echo "Initializing Clinical Sandboxing & Cleaning Quarantine..."
-
-        # Get application location
-        APP_PATH="$(dirname "$0")/KodysCAN.app"
-        ALT_PATH="/Applications/KodysCAN.app"
-
-        if [ -d "$APP_PATH" ]; then
-            TARGET="$APP_PATH"
-        elif [ -d "$ALT_PATH" ]; then
-            TARGET="$ALT_PATH"
+        echo \"🛡️ Kodys CLINICAL: SECURE DEPLOYMENT PROTOCOL\"
+        echo \"------------------------------------------------\"
+        echo \"Initializing Clinical Sandboxing & Cleaning Quarantine...\"
+        
+        APP_PATH=\"\$(dirname \"\$0\")/KodysCAN.app\"
+        ALT_PATH=\"/Applications/KodysCAN.app\"
+        
+        if [ -d \"\$APP_PATH\" ]; then
+            TARGET=\"\$APP_PATH\"
+        elif [ -d \"\$ALT_PATH\" ]; then
+            TARGET=\"\$ALT_PATH\"
         else
-            echo "❌ ERROR: KodysCAN.app not found."
-            read -p "Press Enter to exit..."
+            echo \"❌ ERROR: KodysCAN.app not found. Please drag it to Applications first.\"
+            read -p \"Press Enter to exit...\"
             exit 1
         fi
-
-        echo "Cleaning: $TARGET"
-        sudo xattr -rd com.apple.quarantine "$TARGET" 2>/dev/null
-
-        echo "✅ Security handshake complete."
-        echo "------------------------------------------------"
-        echo "You can now launch KodysCAN normally."
-        echo "If still blocked: System Settings -> Privacy & Security -> Open Anyway"
-        echo "------------------------------------------------"
-        read -p "Press Enter to finish..."
-EOF
-        # Remove the leading YAML indentation from the script file
-        sed -i '' 's/        //' dmg_source/ENABLE_SECURITY.command
+        
+        echo \"Cleaning: \$TARGET\"
+        sudo xattr -rd com.apple.quarantine \"\$TARGET\" 2>/dev/null
+        
+        echo \"✅ Security handshake complete.\"
+        echo \"------------------------------------------------\"
+        echo \"You can now launch KodysCAN normally.\"
+        echo \"If still blocked, go to: System Settings -> Privacy & Security -> Open Anyway\"
+        echo \"------------------------------------------------\"
+        read -p \"Press Enter to finish...\""
+        
+        echo "$SCRIPT_CONTENT" > dmg_source/ENABLE_SECURITY.command
+        # Clean up any potential YAML leading spaces from the generated file
+        sed -i '' 's/^[[:space:]]*//' dmg_source/ENABLE_SECURITY.command
+        # Restore the shebang at the top
+        sed -i '' '1s/.*/#!\/bin\/bash/' dmg_source/ENABLE_SECURITY.command
         chmod +x dmg_source/ENABLE_SECURITY.command
         
-        # Sync and sleep to prevent "Resource Busy"
+        # Sync and safety buffer to prevent "Resource Busy"
         sync
-        sleep 5
+        sleep 10
+        
         hdiutil create -volname "KodysCAN-Setup" -srcfolder dmg_source -ov -format UDZO KodysCAN_macOS_Setup.dmg
 
     - name: Upload macOS Artifact
