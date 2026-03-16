@@ -740,6 +740,8 @@ class TX_MASTER_GENERATED_LICENSES(models.Model):
     GENERATED_KEY = models.CharField(max_length=100)
     STATUS = models.CharField(max_length=50, default="PENDING_ACTIVATION")
     NOTES = models.TextField(blank=True, null=True)
+    VERSION_INFO = models.CharField(max_length=50, blank=True, null=True)
+    LAST_HEARTBEAT = models.DateTimeField(blank=True, null=True)
     CREATED_ON = models.DateTimeField(auto_now_add=True)
     UPDATED_ON = models.DateTimeField(auto_now=True)
     DATAMODE = models.CharField(max_length=1, default="A", choices=DATAMODE_CHOICES)

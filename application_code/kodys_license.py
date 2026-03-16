@@ -144,24 +144,41 @@ class LicenseActivationUI(QtGui.QDialog):
 
     def sync_activation_with_server(self, key):
         """Attempts to notify the central office that this machine is now active."""
-        logger.info(f"Background Sync: Attempting to reach clinical admin server...")
-        try:
-            # We try local 8000 first, or any pre-configured central server IP
-            server_urls = ["http://127.0.0.1:8000/api/license/activate/"]
-            for url in server_urls:
-                try:
-                    logger.debug(f"Trying sync target: {url}")
-                    response = requests.post(url, data={
-                        'hardware_id': self.hardware_id,
-                        'key': key
-                    }, timeout=8)
-                    logger.info(f"Sync Handshake Success. Server Response: {response.status_code} - {response.text}")
-                    break 
-                except Exception as req_err:
-                    logger.debug(f"Sync target {url} unreachable: {req_err}")
-                    continue
-        except Exception as global_sync_err:
-            logger.error(f"Global Sync Engine Failure: {global_sync_err}")
+        send_pulse(self.hardware_id, key)
+
+def send_pulse(hw_id, key):
+    """
+    Independent pulse function to report status to the central server.
+    Called on startup and after activation.
+    """
+    logger.info(f"Clinical Pulse: Sending heartbeat for HWID {hw_id}...")
+    try:
+        # Configuration: Replace with public IP/Domain in production
+        server_urls = ["http://127.0.0.1:8000/api/license/pulse/"]
+        for url in server_urls:
+            try:
+                response = requests.post(url, data={
+                    'hardware_id': hw_id,
+                    'key': key,
+                    'version': 'V3.6'
+                }, timeout=10)
+                
+                data = response.json()
+                logger.info(f"Pulse Success. Status: {data.get('status')} - {data.get('message')}")
+                
+                # Remote Lockdown Mechanism
+                if data.get('status') == 'REVOKED':
+                    logger.critical("LICENSE REVOKED BY CENTRAL OFFICE. Terminating session.")
+                    QtGui.QMessageBox.critical(None, "License Revoked", "This software license has been revoked by the central administrator.\n\nPlease contact Kodys clinical support.")
+                    sys.exit(0)
+                
+                return True
+            except Exception as e:
+                logger.debug(f"Pulse target unreachable: {url} -> {e}")
+                continue
+    except Exception as e:
+        logger.error(f"Global Pulse Engine Error: {e}")
+    return False
 
 def ensure_licensed(app_instance):
     """
@@ -170,6 +187,10 @@ def ensure_licensed(app_instance):
     MUST be called after QApplication is created, but before the main window starts.
     """
     if license_core.is_system_licensed():
+        hw_id = license_core.get_hardware_id()
+        saved_key = license_core.load_saved_license()
+        # Background pulse check on launch
+        threading.Thread(target=send_pulse, args=(hw_id, saved_key), daemon=True).start()
         return True # Authorized
 
     hw_id = license_core.get_hardware_id()

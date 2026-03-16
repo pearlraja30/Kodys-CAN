@@ -238,30 +238,51 @@ def download_license_file(request, lic_id):
         return HttpResponse(f"Error: {e}", status=500)
 
 @csrf_exempt
-def report_activation_status(request):
+def clinical_pulse(request):
     """
-    API endpoint for clinical workstations to sync their activation status.
-    Called by the client app upon successful local key verification.
+    The 'PULSE' API: Unified endpoint for activation sync and heartbeat monitoring.
+    Clinical workstations ping this on launch and periodically.
     """
+    from django.utils import timezone
     hw_id = request.POST.get('hardware_id', '').strip()
     key = request.POST.get('key', '').strip()
+    version = request.POST.get('version', 'V2')
     
     if hw_id and key:
         try:
-            # Atomic update: find the pending license and activate it
             lic = TX_MASTER_GENERATED_LICENSES.objects.get(
                 HARDWARE_ID=hw_id, 
                 GENERATED_KEY=key
             )
+            
+            # 1. Update Heartbeat Metadata
+            lic.LAST_HEARTBEAT = timezone.now()
+            lic.VERSION_INFO = version
+            
+            # 2. Auto-Transition to ACTIVE if was pending
             if lic.STATUS == "PENDING_ACTIVATION":
                 lic.STATUS = "ACTIVE"
-                lic.save()
-                return JsonResponse({"status": "success", "message": "Clinical fleet status synchronized."})
-            return JsonResponse({"status": "already_active", "message": "System already marked as active."})
-        except:
-            return JsonResponse({"status": "error", "message": "Invalid hardware link detected."})
             
-    return JsonResponse({"status": "error", "message": "Missing credentials."}, status=400)
+            lic.save()
+            
+            # 3. Security Response: Check if Revoked
+            if lic.STATUS == "REVOKED":
+                return JsonResponse({"status": "REVOKED", "message": "Access denied by central office."})
+                
+            return JsonResponse({
+                "status": "OK", 
+                "message": "Handshake successful.",
+                "server_time": timezone.now().isoformat()
+            })
+        except:
+            return JsonResponse({"status": "UNAUTHORIZED", "message": "Invalid hardware link."})
+            
+    return JsonResponse({"status": "ERROR", "message": "Missing payload."}, status=400)
+
+@csrf_exempt
+def report_activation_status(request):
+    # This remains for backward compatibility with 3.5, but calls Pulse internally
+    return clinical_pulse(request)
 
 
 
