@@ -26,8 +26,20 @@ pip install pyinstaller
 :: Step 3: Run PyInstaller to create the Windows .exe
 echo.
 echo [Step 3] Compiling application using PyInstaller...
-:: This compiles application_code/run.py into an executable folder in dist/run
-pyinstaller --noconfirm --onedir --windowed --add-data "app_config;app_config" --add-data "kodys;kodys" application_code\run.py
+python -m PyInstaller --noconfirm --onedir --windowed --name "Kodys Foot Clinik" ^
+  --add-data "app_config;app_config" ^
+  --add-data "kodys;kodys" ^
+  --add-data "app_assets;app_assets" ^
+  --add-data "config;config" ^
+  --add-data "db.sqlite3;." ^
+  --add-data "wkhtmltopdf;wkhtmltopdf" ^
+  --hidden-import "PyQt5.QtWebEngineWidgets" ^
+  --hidden-import "PyQt5.QtPrintSupport" ^
+  --hidden-import "cv2" ^
+  --hidden-import "pywinusb.hid" ^
+  --hidden-import "setuptools" ^
+  --hidden-import "distutils" ^
+  application_code\run.py
 
 if %errorlevel% neq 0 (
     echo [ERROR] PyInstaller compilation failed.

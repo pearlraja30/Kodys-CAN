@@ -42,6 +42,12 @@ jobs:
         Get-ChildItem -Path . -Include *.pyc -Recurse | Remove-Item -Force
       shell: pwsh
 
+    - name: Prepare wkhtmltopdf for Bundling
+      shell: pwsh
+      run: |
+        mkdir wkhtmltopdf
+        xcopy /E /I "C:\Program Files\wkhtmltopdf" wkhtmltopdf
+
     - name: Compile Python to EXE (PyInstaller)
       shell: pwsh
       run: |
@@ -51,6 +57,7 @@ jobs:
           --add-data "app_assets;app_assets" `
           --add-data "config;config" `
           --add-data "db.sqlite3;." `
+          --add-data "wkhtmltopdf;wkhtmltopdf" `
           --hidden-import "PyQt5.QtWebEngineWidgets" `
           --hidden-import "PyQt5.QtPrintSupport" `
           --hidden-import "cv2" `

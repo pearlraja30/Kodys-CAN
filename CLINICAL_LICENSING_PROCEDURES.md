@@ -47,7 +47,7 @@ The Kodys platform features a real-time **Clinical Pulse** engine. You can monit
 ---
 
 ## 4. Incident Analysis & Troubleshooting
-If a customer reports a "Hang" or "No Action" when clicking Activate:
+The application is designed to run as a **Standard User**. No "Run as Administrator" is required.
 
 ### A. Check the Black-Box Log
 Ask the customer to send you the **`kodys_debug.log`** file.
@@ -62,6 +62,13 @@ MacOS may show: *"Apple could not verify..."*
 2.  Select **Open** from the menu.
 3.  Click the **Open** button in the secondary prompt. (Required only once).
 
+### C. Problem / Solution Ledger
+| Incident | Symptom | Fix |
+| :--- | :--- | :--- |
+| **Silent Hang** | Button clicked, nothing happens. | Check `kodys_debug.log`. Ensure antivirus is not blocking the app. |
+| **Invalid Key** | "Key Mismatch" in logs. | Ensure they didn't copy the Hardware ID by mistake. Use **Method B (File Import)**. |
+| **No Sync** | Status stays `PENDING` in Admin. | Machine has no internet. You can manually click 🔄 in Admin to force status change. |
+
 ---
 
 ## 5. Security & Maintenance
@@ -70,5 +77,5 @@ MacOS may show: *"Apple could not verify..."*
 *   **Hardware Changes:** If a customer replaces their PC, the Hardware ID will change. You must generate a **New License** for the new ID.
 
 ---
-*Document Version: 3.6.0*  
+*Document Version: 3.6.1*  
 *Last Updated: March 2026*

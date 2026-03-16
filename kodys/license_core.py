@@ -6,6 +6,20 @@ import hmac
 LICENSE_SECRET = b"KODYS_SECURE_ENTERPRISE_LICENSE_KEY_2026_!@#$"
 LICENSE_FILE = "kodys_license.dat"
 
+# --- Centralized Writable Data Path ---
+import sys
+if getattr(sys, 'frozen', False):
+    if sys.platform == 'win32':
+        KODYS_DATA_DIR = os.path.join(os.environ.get('LOCALAPPDATA', os.path.join(os.path.expanduser("~"), "AppData", "Local")), "KodysCAN")
+    else:
+        KODYS_DATA_DIR = os.path.join(os.path.expanduser("~"), ".kodys_can")
+else:
+    # Use config dir in root for development
+    KODYS_DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "config"))
+
+if not os.path.exists(KODYS_DATA_DIR):
+    os.makedirs(KODYS_DATA_DIR)
+
 def get_hardware_id():
     """Generates a unique hardware footprint for the machine."""
     try:
@@ -29,11 +43,7 @@ def verify_license(hardware_id, user_license_key):
     return clean_user == clean_expected
 
 def get_license_filepath():
-    app_dir = os.path.dirname(os.path.abspath(__file__))
-    config_dir = os.path.abspath(os.path.join(app_dir, "..", "config"))
-    if not os.path.exists(config_dir):
-        os.makedirs(config_dir)
-    return os.path.join(config_dir, LICENSE_FILE)
+    return os.path.join(KODYS_DATA_DIR, LICENSE_FILE)
 
 def load_saved_license():
     path = get_license_filepath()

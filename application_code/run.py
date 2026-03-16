@@ -19,6 +19,39 @@ import os
 DEBUG_MODE = "--debug" in sys.argv
 LOG_FILE = os.path.join(os.path.expanduser("~"), "kodys_debug.log") if getattr(sys, 'frozen', False) else "kodys_debug.log"
 
+# --- Centralized Writable Data Path for Clinical Sandboxing ---
+if getattr(sys, 'frozen', False):
+    if sys.platform == 'win32':
+        KODYS_DATA_DIR = os.path.join(os.environ.get('LOCALAPPDATA', os.path.join(os.path.expanduser("~"), "AppData", "Local")), "KodysCAN")
+    else:
+        KODYS_DATA_DIR = os.path.join(os.path.expanduser("~"), ".kodys_can")
+else:
+    KODYS_DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+
+if not os.path.exists(KODYS_DATA_DIR):
+    os.makedirs(KODYS_DATA_DIR)
+
+def sync_clinical_data():
+    """Bridges read-only bundle data to writable user sandbox on first run."""
+    import shutil
+    # Ensure subdirectories exist for media and data
+    for folder in ["media", "DATA", "logs", "config"]:
+        fpath = os.path.join(KODYS_DATA_DIR, folder)
+        if not os.path.exists(fpath):
+            os.makedirs(fpath)
+            
+    if getattr(sys, 'frozen', False):
+        bundle_db = os.path.join(os.path.dirname(sys.executable), "db.sqlite3")
+        target_db = os.path.join(KODYS_DATA_DIR, "db.sqlite3")
+        if os.path.exists(bundle_db) and not os.path.exists(target_db):
+            logger.info(f"Seeding Clinical Database: {bundle_db} -> {target_db}")
+            try:
+                shutil.copy2(bundle_db, target_db)
+            except Exception as e:
+                logger.error(f"Seeding failed: {e}")
+
+sync_clinical_data()
+
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
@@ -94,10 +127,10 @@ min_height = 600
 window_title = "My Django App"
 icon_name = "icon.png"
 fullscreen_allowed = True
-project_dir_name = "app"
-project_dir_path = "../app/"
-assets_dir_name = "app"
-assets_dir_path = "../app/"
+project_dir_name = "app_config"
+project_dir_path = "../app_config/"
+assets_dir_name = "app_config"
+assets_dir_path = "../app_config/"
 dev_tools_menu_enabled = True
 dev = None
 endpoint = None

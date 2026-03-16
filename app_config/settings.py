@@ -13,9 +13,21 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 import os
 import sys
 
-# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
+
+# --- Writable Data Sandbox for Clinical Environments ---
+# Prevents "Run as Administrator" issues by moving DB/Logs to a user-writable path
+if getattr(sys, 'frozen', False):
+    if sys_platform := sys.platform == 'win32':
+        KODYS_DATA_DIR = os.path.join(os.environ.get('LOCALAPPDATA', os.path.join(os.path.expanduser("~"), "AppData", "Local")), "KodysCAN")
+    else:
+        KODYS_DATA_DIR = os.path.join(os.path.expanduser("~"), ".kodys_can")
+else:
+    KODYS_DATA_DIR = BASE_DIR
+
+if not os.path.exists(KODYS_DATA_DIR):
+    os.makedirs(KODYS_DATA_DIR)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
@@ -87,7 +99,7 @@ WSGI_APPLICATION = "wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
+        "NAME": os.path.join(KODYS_DATA_DIR, "db.sqlite3"),
     }
 }
 
@@ -130,8 +142,8 @@ USE_TZ = False
 
 STATIC_URL = "/static/"
 DATA_URL = "/site_data/"
-MEDIA_ROOT = os.path.join(os.path.dirname(BASE_DIR), "app_assets", "media")
-MEDIA_DATA = os.path.join(os.path.dirname(BASE_DIR), "app_assets", "DATA")
+MEDIA_ROOT = os.path.join(KODYS_DATA_DIR, "media")
+MEDIA_DATA = os.path.join(KODYS_DATA_DIR, "DATA")
 DATA_UPLOAD_MAX_MEMORY_SIZE = 25000000
 
 #########################################################################
@@ -169,7 +181,7 @@ LOGGING = {
             "level": "DEBUG",
             "class": "logging.handlers.TimedRotatingFileHandler",
             "formatter": "custom",
-            "filename": "%s/logs/app.log" % BASE_DIR,
+            "filename": os.path.join(KODYS_DATA_DIR, "app.log"),
             "when": "W4",
             "interval": 1,
             "backupCount": 7,
@@ -220,7 +232,16 @@ SA_ACCOUNTAPP_EMAIL_REGEX = (
 )
 
 
-app_dir_path = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
-REPORT_TO_PDF_PATH = app_dir_path + "\\wkhtmltopdf\\bin\\wkhtmltopdf.exe"
+if getattr(sys, 'frozen', False):
+    # If frozen, we are in the root of the app bundle
+    app_dir_path = os.path.dirname(sys.executable)
+else:
+    # If not frozen, we go up from app_config/settings.py
+    app_dir_path = os.path.dirname(os.path.dirname(BASE_DIR))
+
+# Robust search for wkhtmltopdf
+REPORT_TO_PDF_PATH = os.path.join(app_dir_path, "wkhtmltopdf", "bin", "wkhtmltopdf.exe")
+
+# Fallback to system path if bundled one is missing
+if not os.path.exists(REPORT_TO_PDF_PATH):
+    REPORT_TO_PDF_PATH = "wkhtmltopdf" 
