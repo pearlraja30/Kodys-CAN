@@ -75,9 +75,23 @@ if %errorlevel% neq 0 (
     exit /b
 )
 
-:: Step 4: Run Inno Setup Compiler
+:: Step 4: Run Bundle Sanity Audit
 echo.
-echo [Step 4] Bundling the compiled code into an Installer via Inno Setup...
+echo [Step 4] Running Clinical Bundle Audit...
+set PYTHONPATH=dist\Kodys Foot Clinik
+python application_code\sanity_check.py
+if %errorlevel% neq 0 (
+    echo.
+    echo [FATAL] CLINICAL BUNDLE AUDIT FAILED! 
+    echo Some modules are missing from the build. Aborting installer generation.
+    pause
+    exit /b
+)
+echo [SUCCESS] Audit passed. All clinical modules verified in the bundle.
+
+:: Step 5: Run Inno Setup Compiler
+echo.
+echo [Step 5] Bundling the compiled code into an Installer via Inno Setup...
 :: Assumes Inno Setup is installed in its default location
 set INNO_PATH="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 

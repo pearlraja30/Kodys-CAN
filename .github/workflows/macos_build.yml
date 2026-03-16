@@ -90,6 +90,14 @@ jobs:
             --hidden-import "django.contrib.staticfiles" \
             application_code/run.py
 
+    - name: Run Bundle Sanity Audit (Pre-Installer Check)
+      run: |
+        echo "🧐 Auditing compiled macOS bundle for clinical integrity..."
+        # On macOS, libraries are in KodysCAN.app/Contents/Resources or the dist root for --onedir
+        export PYTHONPATH="dist/KodysCAN.app/Contents/Resources:dist"
+        python3 application_code/sanity_check.py
+        echo "✅ BUNDLE AUDIT PASSED: All clinical assets verified."
+
     - name: Ad-Hoc Code Sign (Apple Hardened Runtime)
       run: |
         find "dist/KodysCAN.app" -name "*.so" -exec codesign --force --options runtime --deep --sign - {} + || true

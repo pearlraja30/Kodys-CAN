@@ -72,7 +72,19 @@ python3 -m PyInstaller --noconfirm --onedir --windowed \
 
 if [ $? -eq 0 ]; then
     echo ""
-    echo "[Step 4] Ad-Hoc Code Signing for integrity with Hardened Runtime..."
+    echo "[Step 4] Running Clinical Bundle Audit..."
+    export PYTHONPATH="dist/KodysCAN.app/Contents/Resources:dist"
+    python3 application_code/sanity_check.py
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "[FATAL] CLINICAL BUNDLE AUDIT FAILED!"
+        echo "Missing modules detected. Build aborted."
+        exit 1
+    fi
+    echo "[SUCCESS] Audit passed. All clinical modules verified in the .app bundle."
+
+    echo ""
+    echo "[Step 5] Ad-Hoc Code Signing for integrity with Hardened Runtime..."
     codesign --force --options runtime --deep --sign - "dist/KodysCAN.app"
     
     echo ""
