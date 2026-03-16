@@ -28,6 +28,9 @@ def run_sanity_check():
         "cryptography",
         "cryptography.fernet",
         "cryptography.hazmat.backends",
+        "cryptography.hazmat.primitives.asymmetric",
+        "setuptools",
+        "pkg_resources", # Common missing dependency
         "heartpy",
         "pyhrv",
         "pyhrv.time_domain",
@@ -39,6 +42,7 @@ def run_sanity_check():
         "scipy.optimize",
         "scipy.interpolate",
         "scipy.stats",
+        "scipy.special",
         "matplotlib",
         "matplotlib.pyplot",
         "pandas",
@@ -48,7 +52,8 @@ def run_sanity_check():
         "PyQt5.QtPrintSupport",
         "cv2", # OpenCV
         "psutil",
-        "requests"
+        "requests",
+        "packaging"
     ]
     
     # Windows-specific dependencies

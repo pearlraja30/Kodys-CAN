@@ -43,6 +43,7 @@ python -m PyInstaller --noconfirm --onedir --windowed --name "Kodys Foot Clinik"
   --hidden-import "pymupdf" ^
   --hidden-import "cryptography.fernet" ^
   --hidden-import "cryptography.hazmat.backends" ^
+  --hidden-import "pkg_resources" ^
   --hidden-import "heartpy" ^
   --hidden-import "pyhrv" ^
   --hidden-import "pyhrv.time_domain" ^
