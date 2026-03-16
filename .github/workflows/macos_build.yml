@@ -77,8 +77,10 @@ jobs:
         mkdir -p dmg_source
         cp -r "dist/KodysCAN.app" dmg_source/
         
+        # Create a README directly in the DMG for clinical staff
+        printf "🛡️ Kodys MAC INSTALLATION INSTRUCTIONS\n====================================\n1. Drag KodysCAN to your Applications folder.\n2. RIGHT-CLICK on '🛡️_ENABLE_SECURITY.command' and select OPEN.\n3. Click 'Open' again in the warning box.\n4. Enter your Mac password when prompted.\n5. You can now launch KodysCAN normally.\n" > dmg_source/README_MAC_FIRST.txt
+        
         # Define the bypass script using a robust multi-line variable
-        # This keeps the YAML structure clean and avoids heredoc indentation errors
         SCRIPT_CONTENT="#!/bin/bash
         clear
         echo \"🛡️ Kodys CLINICAL: SECURE DEPLOYMENT PROTOCOL\"
@@ -93,8 +95,7 @@ jobs:
         elif [ -d \"\$ALT_PATH\" ]; then
             TARGET=\"\$ALT_PATH\"
         else
-            echo \"❌ ERROR: KodysCAN.app not found. Please drag it to Applications first.\"
-            read -p \"Press Enter to exit...\"
+            echo \"❌ ERROR: KodysCAN.app not found.\"
             exit 1
         fi
         
@@ -104,21 +105,15 @@ jobs:
         echo \"✅ Security handshake complete.\"
         echo \"------------------------------------------------\"
         echo \"You can now launch KodysCAN normally.\"
-        echo \"If still blocked, go to: System Settings -> Privacy & Security -> Open Anyway\"
-        echo \"------------------------------------------------\"
         read -p \"Press Enter to finish...\""
         
-        echo "$SCRIPT_CONTENT" > dmg_source/ENABLE_SECURITY.command
-        # Clean up any potential YAML leading spaces from the generated file
-        sed -i '' 's/^[[:space:]]*//' dmg_source/ENABLE_SECURITY.command
-        # Restore the shebang at the top
-        sed -i '' '1s/.*/#!\/bin\/bash/' dmg_source/ENABLE_SECURITY.command
-        chmod +x dmg_source/ENABLE_SECURITY.command
+        echo "$SCRIPT_CONTENT" > "dmg_source/🛡️_ENABLE_SECURITY.command"
+        sed -i '' 's/^[[:space:]]*//' "dmg_source/🛡️_ENABLE_SECURITY.command"
+        sed -i '' '1s/.*/#!\/bin\/bash/' "dmg_source/🛡️_ENABLE_SECURITY.command"
+        chmod +x "dmg_source/🛡️_ENABLE_SECURITY.command"
         
-        # Sync and safety buffer to prevent "Resource Busy"
         sync
         sleep 10
-        
         hdiutil create -volname "KodysCAN-Setup" -srcfolder dmg_source -ov -format UDZO KodysCAN_macOS_Setup.dmg
 
     - name: Upload macOS Artifact
