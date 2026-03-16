@@ -28,6 +28,7 @@ echo ""
 echo "[Step 3] Compiling application into a .app bundle..."
 # Note: Using : instead of ; for paths on Mac
 python3 -m PyInstaller --noconfirm --onedir --windowed \
+    --osx-bundle-identifier "com.kodys.can" \
     --add-data "app_config:app_config" \
     --add-data "kodys:kodys" \
     --add-data "app_assets:app_assets" \
@@ -43,8 +44,8 @@ python3 -m PyInstaller --noconfirm --onedir --windowed \
 
 if [ $? -eq 0 ]; then
     echo ""
-    echo "[Step 4] Ad-Hoc Code Signing for integrity..."
-    codesign --force --deep --sign - "dist/KodysCAN.app"
+    echo "[Step 4] Ad-Hoc Code Signing for integrity with Hardened Runtime..."
+    codesign --force --options runtime --deep --sign - "dist/KodysCAN.app"
     
     echo ""
     echo "==================================================="

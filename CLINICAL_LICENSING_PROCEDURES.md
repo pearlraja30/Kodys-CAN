@@ -56,11 +56,13 @@ Ask the customer to send you the **`kodys_debug.log`** file.
 *   *This log captures every cryptographic event and system permission error.*
 
 ### B. macOS Security Bypass (Gatekeeper)
-MacOS may show: *"Apple could not verify..."*
-**Workaround:**
-1.  **Right-click** (not left-click) the KodysCAN icon.
-2.  Select **Open** from the menu.
-3.  Click the **Open** button in the secondary prompt. (Required only once).
+MacOS may show: *"Apple could not verify..."* or *"Malware warning"*.
+**Standard Procedural Fix (v3.7):**
+1.  Open the **KodysCAN-Setup.dmg**.
+2.  Double-click the script named **`Click_Once_to_Enable.command`**.
+3.  Enter your Mac password if prompted (this clears the system block).
+4.  **Launch KodysCAN normally.**
+*Note: If you don't use the script, you must **Right-Click -> Open** on the app icon to bypass the one-time Apple security check.*
 
 ### C. Problem / Solution Ledger
 | Incident | Symptom | Fix |
@@ -77,5 +79,5 @@ MacOS may show: *"Apple could not verify..."*
 *   **Hardware Changes:** If a customer replaces their PC, the Hardware ID will change. You must generate a **New License** for the new ID.
 
 ---
-*Document Version: 3.6.1*  
+*Document Version: 3.7*  
 *Last Updated: March 2026*

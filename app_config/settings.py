@@ -239,7 +239,11 @@ else:
     app_dir_path = os.path.dirname(os.path.dirname(BASE_DIR))
 
 # Robust search for wkhtmltopdf
-REPORT_TO_PDF_PATH = os.path.join(app_dir_path, "wkhtmltopdf", "bin", "wkhtmltopdf.exe")
+if sys.platform == "win32":
+    REPORT_TO_PDF_PATH = os.path.join(app_dir_path, "wkhtmltopdf", "bin", "wkhtmltopdf.exe")
+else:
+    # On Mac/Linux, we search for the binary without .exe
+    REPORT_TO_PDF_PATH = os.path.join(app_dir_path, "wkhtmltopdf", "bin", "wkhtmltopdf")
 
 # Fallback to system path if bundled one is missing
 if not os.path.exists(REPORT_TO_PDF_PATH):
