@@ -741,6 +741,8 @@ class TX_MASTER_GENERATED_LICENSES(models.Model):
     STATUS = models.CharField(max_length=50, default="PENDING_ACTIVATION")
     NOTES = models.TextField(blank=True, null=True)
     VERSION_INFO = models.CharField(max_length=50, blank=True, null=True)
+    IS_ACTIVE = models.BooleanField(default=True)
+    MACHINE_NAME = models.CharField(max_length=255, blank=True, null=True)
     LAST_HEARTBEAT = models.DateTimeField(blank=True, null=True)
     CREATED_ON = models.DateTimeField(auto_now_add=True)
     UPDATED_ON = models.DateTimeField(auto_now=True)

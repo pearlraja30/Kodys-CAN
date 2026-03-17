@@ -151,6 +151,7 @@ def send_pulse(hw_id, key):
     Independent pulse function to report status to the central server.
     Called on startup and after activation.
     """
+    import platform
     logger.info(f"Clinical Pulse: Sending heartbeat for HWID {hw_id}...")
     try:
         # Configuration: Replace with public IP/Domain in production
@@ -160,16 +161,17 @@ def send_pulse(hw_id, key):
                 response = requests.post(url, data={
                     'hardware_id': hw_id,
                     'key': key,
-                    'version': 'V3.6'
+                    'version': 'V8.0-Pro',
+                    'machine_name': platform.node(),
+                    'os_info': f"{platform.system()} {platform.release()}"
                 }, timeout=10)
                 
                 data = response.json()
                 logger.info(f"Pulse Success. Status: {data.get('status')} - {data.get('message')}")
                 
-                # Remote Lockdown Mechanism
+                # Remote Lockdown Mechanism (Sync with Central Server)
                 if data.get('status') == 'REVOKED':
                     logger.critical("LICENSE REVOKED BY CENTRAL OFFICE. Terminating session.")
-                    QtGui.QMessageBox.critical(None, "License Revoked", "This software license has been revoked by the central administrator.\n\nPlease contact Kodys clinical support.")
                     sys.exit(0)
                 
                 return True

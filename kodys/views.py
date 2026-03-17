@@ -13,6 +13,8 @@ from . import app_logger as ulo
 from .forms import *
 import ast
 from . import license_core
+from . import license_hub
+from django.http import JsonResponse, HttpResponseRedirect, HttpResponse
 
 login_url = "/signin/"
 logger = logging.getLogger(settings.LOGGER_FILE_NAME)
@@ -212,14 +214,9 @@ def toggle_license_status(request, lic_id):
         return HttpResponse("Unauthorized", status=403)
     try:
         lic = TX_MASTER_GENERATED_LICENSES.objects.get(id=lic_id)
-        # Cycle through clinical states
-        if lic.STATUS == "REVOKED":
-            lic.STATUS = "PENDING_ACTIVATION"
-        elif lic.STATUS == "ACTIVE":
-            lic.STATUS = "REVOKED"
-        else:
-            lic.STATUS = "ACTIVE"
-        lic.save()
+        # Force a toggle of the active state
+        new_state = not lic.IS_ACTIVE
+        license_hub.toggle_license_status(lic_id, new_state)
     except:
         pass
     return HttpResponseRedirect(reverse("admin_license_dashboard"))
@@ -241,43 +238,24 @@ def download_license_file(request, lic_id):
 def clinical_pulse(request):
     """
     The 'PULSE' API: Unified endpoint for activation sync and heartbeat monitoring.
-    Clinical workstations ping this on launch and periodically.
+    Now uses the centralized License Hub engine for robust verification.
     """
-    from django.utils import timezone
+    import platform
     hw_id = request.POST.get('hardware_id', '').strip()
     key = request.POST.get('key', '').strip()
-    version = request.POST.get('version', 'V2')
+    version = request.POST.get('version', 'V8.0')
+    machine_name = request.POST.get('machine_name', platform.node())
     
     if hw_id and key:
-        try:
-            lic = TX_MASTER_GENERATED_LICENSES.objects.get(
-                HARDWARE_ID=hw_id, 
-                GENERATED_KEY=key
-            )
+        result = license_hub.process_client_pulse(
+            hardware_id=hw_id, 
+            key=key, 
+            machine_name=machine_name, 
+            version_info=version
+        )
+        return JsonResponse(result)
             
-            # 1. Update Heartbeat Metadata
-            lic.LAST_HEARTBEAT = timezone.now()
-            lic.VERSION_INFO = version
-            
-            # 2. Auto-Transition to ACTIVE if was pending
-            if lic.STATUS == "PENDING_ACTIVATION":
-                lic.STATUS = "ACTIVE"
-            
-            lic.save()
-            
-            # 3. Security Response: Check if Revoked
-            if lic.STATUS == "REVOKED":
-                return JsonResponse({"status": "REVOKED", "message": "Access denied by central office."})
-                
-            return JsonResponse({
-                "status": "OK", 
-                "message": "Handshake successful.",
-                "server_time": timezone.now().isoformat()
-            })
-        except:
-            return JsonResponse({"status": "UNAUTHORIZED", "message": "Invalid hardware link."})
-            
-    return JsonResponse({"status": "ERROR", "message": "Missing payload."}, status=400)
+    return JsonResponse({"status": "ERROR", "message": "Missing clinical payload."}, status=400)
 
 @csrf_exempt
 def report_activation_status(request):
