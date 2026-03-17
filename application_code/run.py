@@ -8,20 +8,13 @@ import platform
 # Goal: Capture every single byte of output, even before the GUI starts.
 
 # 1. Determine a stable, writable location for logs
-if getattr(sys, 'frozen', False):
-    if sys.platform == 'win32':
-        KODYS_DATA_DIR = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser("~\\AppData\\Local")), "KodysCAN")
-    else:
-        KODYS_DATA_DIR = os.path.join(os.path.expanduser("~"), ".kodys_can")
-else:
-    # Development mode: local directory
-    KODYS_DATA_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# EMERGENCY OVERRIDE: Write to Desktop for guaranteed visibility during debug.
+DESKTOP_PATH = os.path.join(os.path.expanduser("~"), "Desktop")
+LOG_FILE = os.path.join(DESKTOP_PATH, "KODYS_EMERGENCY_DEBUG.log")
 
-LOG_DIR = os.path.join(KODYS_DATA_DIR, "logs")
-if not os.path.exists(LOG_DIR):
-    os.makedirs(LOG_DIR)
-
-LOG_FILE = os.path.join(LOG_DIR, "clinical_flight_recorder.log")
+if not os.path.exists(DESKTOP_PATH):
+    # Fallback to home if Desktop is missing
+    LOG_FILE = os.path.join(os.path.expanduser("~"), "KODYS_FLIGHT_RECORDER.log")
 
 # 2. Setup the Master Logger
 logging.basicConfig(
