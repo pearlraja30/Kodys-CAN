@@ -85,8 +85,8 @@ if %errorlevel% neq 0 (
 
 :: Step 4: Run Bundle Sanity Audit
 echo.
-echo [Step 4] Running Clinical Bundle Audit...
-set PYTHONPATH=dist\Kodys Foot Clinik
+echo [Step 4] Running Full-Spectrum Clinical Audit (v7.0)...
+set PYTHONPATH=dist\Kodys Foot Clinik;application_code
 python application_code\sanity_check.py
 if %errorlevel% neq 0 (
     echo.

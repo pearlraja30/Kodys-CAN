@@ -102,8 +102,8 @@ jobs:
     - name: Run Bundle Sanity Audit (Pre-Installer Check)
       run: |
         echo "Auditing compiled macOS bundle for clinical integrity..."
-        # On macOS, libraries are in KodysCAN.app/Contents/Resources or the dist root for --onedir
-        export PYTHONPATH="dist/KodysCAN.app/Contents/Resources:dist"
+        # On Mac, we need to point the audit engine into the heart of the .app bundle
+        export PYTHONPATH="dist/KodysCAN.app/Contents/MacOS:dist"
         python3 application_code/sanity_check.py
         echo "BUNDLE AUDIT PASSED: All clinical assets verified."
 

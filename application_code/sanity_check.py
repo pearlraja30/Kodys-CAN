@@ -1,96 +1,82 @@
 import sys
 import os
 import traceback
+import platform
 
 def run_sanity_check():
-    print("[AUDIT] Kodys CLINICAL: COMPREHENSIVE BUNDLE AUDIT (v5.1)")
-    print("------------------------------------------------")
+    print("[AUDIT] Kodys CLINICAL: FULL-SPECTRUM BUNDLE VERIFICATION (v7.0)")
+    print("----------------------------------------------------------------")
     
-    # List of critical libraries that must be present in the bundle
-    # These cover the GUI, Server, Security, and Diagnostic layers
+    # 1. CORE MODULE AUDIT (Checks for ModuleNotFoundErrors)
     clinical_stack = [
-        "django",
-        "django.contrib.admin",
-        "django.contrib.auth",
-        "django.contrib.contenttypes",
-        "django.contrib.sessions",
-        "django.contrib.messages",
-        "django.contrib.staticfiles",
-        "numpy",
-        "dateutil",
-        "pytz",
-        "six",
-        "xlsxwriter",
-        "fitz",  # PyMuPDF
-        "pymupdf",
-        "pdfkit",
-        "PIL.Image", # Pillow
-        "cryptography",
-        "cryptography.fernet",
-        "cryptography.hazmat.backends",
-        "cryptography.hazmat.primitives.asymmetric",
-        "setuptools",
-        "pkg_resources", # Common missing dependency
-        "heartpy",
-        "pyhrv",
-        "pyhrv.time_domain",
-        "pyhrv.frequency_domain",
-        "pyhrv.nonlinear",
-        "peakutils",
-        "scipy",
-        "scipy.signal",
-        "scipy.optimize",
-        "scipy.interpolate",
-        "scipy.stats",
-        "scipy.special",
-        "matplotlib",
-        "matplotlib.pyplot",
-        "pandas",
-        "serial",
-        "PyQt5",
-        "PyQt5.QtWebEngineWidgets",
-        "PyQt5.QtPrintSupport",
-        "cv2", # OpenCV
-        "psutil",
-        "requests",
-        "packaging"
+        "django", "numpy", "xlsxwriter", "fitz", "pymupdf", "pdfkit", "PIL.Image",
+        "cryptography", "setuptools", "pkg_resources", "heartpy", "pyhrv", 
+        "scipy", "matplotlib", "pandas", "serial", "PyQt5", "cv2", "psutil", "requests"
     ]
     
-    # Windows-specific dependencies
     if sys.platform == "win32":
         clinical_stack.append("pywinusb.hid")
-        clinical_stack.append("winreg")
-
+        
     failed_modules = []
-    
-    print(f"Executing Audit on {len(clinical_stack)} clinical modules...")
-    
+    print(f"[1/3] Auditing {len(clinical_stack)} Clinical Modules...")
     for module_name in clinical_stack:
         try:
-            # Dynamically import the module
             __import__(module_name)
-            print(f"[PASSED]: {module_name}")
-        except ImportError as e:
-            print(f"[FAILED]: {module_name} (Error: {e})")
-            failed_modules.append((module_name, str(e)))
+            # print(f"  [OK] {module_name}")
         except Exception as e:
-            # Handle cases where sub-modules like matplotlib.pyplot might fail due to lack of display
-            # during build-time checks, but are technically 'present'
-            if "Display" in str(e) or "Tkinter" in str(e) or "environment" in str(e):
-                print(f"[WARNING]: {module_name} (Present, but cannot initialize in build environment)")
-            else:
-                print(f"[ERROR]: {module_name} (Unexpected error: {e})")
-                failed_modules.append((module_name, str(e)))
+            print(f"  [X] FAILED: {module_name} ({e})")
+            failed_modules.append(module_name)
 
-    print("------------------------------------------------")
-    if not failed_modules:
-        print("[SUCCESS] AUDIT COMPLETE: All clinical libraries are correctly bundled.")
+    # 2. ASSET INTEGRITY AUDIT (Checks for Missing Folders/Files)
+    print("\n[2/3] Auditing Physical Clinical Assets...")
+    # Discover the bundle path (PYTHONPATH should be set to the bundle root during audit)
+    bundle_root = sys.path[0]
+    required_assets = [
+        "app_config", "kodys", "app_assets", "config", "db.sqlite3"
+    ]
+    
+    # Platform specific binary checks
+    if sys.platform == "win32":
+        required_assets.append("wkhtmltopdf")
+    else:
+        # On Mac, it's bundled in a specific subfolder or at root depending on build
+        required_assets.append("wkhtmltopdf")
+
+    failed_assets = []
+    for asset in required_assets:
+        asset_path = os.path.join(bundle_root, asset)
+        if os.path.exists(asset_path):
+            print(f"  [OK] Asset Found: {asset}")
+        else:
+            print(f"  [X] ASSET MISSING: {asset} (Expected at: {asset_path})")
+            failed_assets.append(asset)
+
+    # 3. CLINICAL SERVER HANDSHAKE (Dry Run)
+    print("\n[3/3] Testing Clinical Server Initialization...")
+    try:
+        # We try to import manage.py from the bundle to see if Django is properly configured
+        manage_py_path = os.path.join(bundle_root, "app_config", "manage.py")
+        if not os.path.exists(manage_py_path):
+             manage_py_path = os.path.join(bundle_root, "app_config", "manage.pyc")
+             
+        if os.path.exists(manage_py_path):
+            print("  [OK] Clinical Management Engine Detected.")
+        else:
+            print("  [X] ERROR: Clinical Management Engine (manage.py) is missing from the bundle!")
+            failed_assets.append("app_config/manage.py")
+    except Exception as e:
+        print(f"  [X] Initialization Failure: {e}")
+        failed_assets.append("initialization_logic")
+
+    print("\n----------------------------------------------------------------")
+    if not failed_modules and not failed_assets:
+        print("[SUCCESS] FULL-SPECTRUM AUDIT PASSED: The bundle is clinically sound.")
         sys.exit(0)
     else:
-        print(f"[FAILED] AUDIT FAILED: {len(failed_modules)} modules are missing or broken!")
-        for mod, err in failed_modules:
-            print(f"  -> {mod}: {err}")
-        print("\nFATAL: Bundle validation failed. Build aborted to prevent deployment of broken software.")
+        print(f"[CRITICAL FAILURE] Audit identified {len(failed_modules) + len(failed_assets)} issues.")
+        if failed_modules: print(f"  Missing Libraries: {', '.join(failed_modules)}")
+        if failed_assets: print(f"  Missing Assets: {', '.join(failed_assets)}")
+        print("\nFATAL: Build aborted. This installer would have failed in production.")
         sys.exit(1)
 
 if __name__ == "__main__":

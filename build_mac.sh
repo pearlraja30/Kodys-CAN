@@ -79,8 +79,8 @@ python3 -m PyInstaller --noconfirm --onedir --windowed \
 
 if [ $? -eq 0 ]; then
     echo ""
-    echo "[Step 4] Running Clinical Bundle Audit..."
-    export PYTHONPATH="dist/KodysCAN.app/Contents/Resources:dist"
+    echo "[Step 4] Running Full-Spectrum Clinical Audit (v7.0)..."
+    export PYTHONPATH="dist/KodysCAN.app/Contents/MacOS:dist:application_code"
     python3 application_code/sanity_check.py
     if [ $? -ne 0 ]; then
         echo ""
