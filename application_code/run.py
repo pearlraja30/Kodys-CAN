@@ -1,23 +1,60 @@
-# An example of embedding CEF browser in a PyQt4 application.
-# Tested with PyQt 4.10.3 (Qt 4.8.5).
-import os, sys, math
-
-# Fix for PyInstaller Windowed mode where stdout/stderr is None
-if sys.stdout is None:
-    class NullWriter:
-        def write(self, *args, **kwargs): pass
-        def flush(self, *args, **kwargs): pass
-    sys.stdout = NullWriter()
-if sys.stderr is None:
-    sys.stderr = sys.stdout
-
-import logging
-import sys
 import os
+import sys
+import logging
+import traceback
+import platform
 
-# --- Diagnostic Logging Setup ---
-DEBUG_MODE = "--debug" in sys.argv
-LOG_FILE = os.path.join(os.path.expanduser("~"), "kodys_debug.log") if getattr(sys, 'frozen', False) else "kodys_debug.log"
+# --- Clinical Flight Recorder (V6.0) ---
+# Goal: Capture every single byte of output, even before the GUI starts.
+
+# 1. Determine a stable, writable location for logs
+if getattr(sys, 'frozen', False):
+    if sys.platform == 'win32':
+        KODYS_DATA_DIR = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser("~\\AppData\\Local")), "KodysCAN")
+    else:
+        KODYS_DATA_DIR = os.path.join(os.path.expanduser("~"), ".kodys_can")
+else:
+    # Development mode: local directory
+    KODYS_DATA_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+LOG_DIR = os.path.join(KODYS_DATA_DIR, "logs")
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
+LOG_FILE = os.path.join(LOG_DIR, "clinical_flight_recorder.log")
+
+# 2. Setup the Master Logger
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)s] [%(threadName)s] %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8'),
+        logging.StreamHandler(sys.stdout) if sys.stdout else logging.NullHandler()
+    ]
+)
+logger = logging.getLogger("KodysFlightRecorder")
+
+# 3. Hijack stdout/stderr to ensure tracebacks are saved to the log file
+class StreamToLogger:
+    def __init__(self, logger, level):
+        self.logger = logger
+        self.level = level
+        self.linebuf = ''
+    def write(self, buf):
+        for line in buf.rstrip().splitlines():
+            self.logger.log(self.level, line.rstrip())
+    def flush(self):
+        pass
+
+sys.stdout = StreamToLogger(logger, logging.INFO)
+sys.stderr = StreamToLogger(logger, logging.ERROR)
+
+logger.info("=== KODYS CLINICAL FLIGHT RECORDER ACTIVE ===")
+logger.info(f"System: {platform.system()} {platform.release()}")
+logger.info(f"Python: {sys.version}")
+logger.info(f"Executable: {sys.executable}")
+logger.info(f"Data Directory: {KODYS_DATA_DIR}")
+logger.info("---------------------------------------------")
 
 # --- Multi-Platform Root Discovery ---
 if getattr(sys, 'frozen', False):
@@ -26,20 +63,11 @@ if getattr(sys, 'frozen', False):
     if ROOT_DIR not in sys.path:
         sys.path.insert(0, ROOT_DIR)
 else:
-    # Project root is two levels up from application_code/run.py
+    # Project root is one level up from application_code/run.py normally,
+    # but based on previous code it was os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# --- Centralized Writable Data Path for Clinical Sandboxing ---
-if getattr(sys, 'frozen', False):
-    if sys.platform == 'win32':
-        KODYS_DATA_DIR = os.path.join(os.environ.get('LOCALAPPDATA', os.path.join(os.path.expanduser("~"), "AppData", "Local")), "KodysCAN")
-    else:
-        KODYS_DATA_DIR = os.path.join(os.path.expanduser("~"), ".kodys_can")
-else:
-    KODYS_DATA_DIR = ROOT_DIR
-
-if not os.path.exists(KODYS_DATA_DIR):
-    os.makedirs(KODYS_DATA_DIR)
+logger.info(f"Root Directory: {ROOT_DIR}")
 
 def sync_clinical_data():
     """Bridges read-only bundle data to writable user sandbox on first run."""
@@ -62,14 +90,11 @@ def sync_clinical_data():
 
 sync_clinical_data()
 
-logging.basicConfig(
-    level=logging.DEBUG if DEBUG_MODE else logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[
-        logging.FileHandler(LOG_FILE, mode='w'),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
+# Check for debug flag in args
+DEBUG_MODE = "--debug" in sys.argv
+if DEBUG_MODE:
+    logger.setLevel(logging.DEBUG)
+    logger.info("DEBUG MODE ENABLED")
 logger = logging.getLogger("KodysDiagnostic")
 logger.info("=== Kodys Clinical Boot Sequence Started ===")
 # --------------------------------
