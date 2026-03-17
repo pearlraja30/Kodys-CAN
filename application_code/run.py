@@ -4,16 +4,27 @@ import logging
 import traceback
 import platform
 
+# Early Heartbeat for Terminal Debug
+print("--- KODYS SYSTEM BOOT INITIATED ---")
+sys.stdout.flush()
+
 # --- Clinical Flight Recorder (V6.0) ---
 # Goal: Capture every single byte of output, even before the GUI starts.
 
-# 1. Determine a stable, writable location for logs
+# 1. Determine local data and log paths
+if getattr(sys, 'frozen', False):
+    if sys.platform == 'win32':
+        KODYS_DATA_DIR = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser("~\\AppData\\Local")), "KodysCAN")
+    else:
+        KODYS_DATA_DIR = os.path.join(os.path.expanduser("~"), ".kodys_can")
+else:
+    KODYS_DATA_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # EMERGENCY OVERRIDE: Write to Desktop for guaranteed visibility during debug.
 DESKTOP_PATH = os.path.join(os.path.expanduser("~"), "Desktop")
 LOG_FILE = os.path.join(DESKTOP_PATH, "KODYS_EMERGENCY_DEBUG.log")
 
 if not os.path.exists(DESKTOP_PATH):
-    # Fallback to home if Desktop is missing
     LOG_FILE = os.path.join(os.path.expanduser("~"), "KODYS_FLIGHT_RECORDER.log")
 
 # 2. Setup the Master Logger
