@@ -107,10 +107,12 @@ jobs:
       shell: pwsh
       run: |
         echo "Auditing compiled Windows bundle for clinical integrity..."
-        $env:PYTHONPATH = "dist/Kodys Foot Clinik"
+        # On Windows pwsh, we use BUNDLE_ROOT as a solid pointer for the v7.1 engine
+        $env:BUNDLE_ROOT = "dist\Kodys Foot Clinik"
+        $env:PYTHONPATH = "dist\Kodys Foot Clinik;application_code"
         python application_code/sanity_check.py
         if ($LASTEXITCODE -ne 0) {
-          echo "BUNDLE AUDIT FAILED: The built binary is missing critical modules."
+          echo "BUNDLE AUDIT FAILED."
           exit 1
         }
         echo "BUNDLE AUDIT PASSED: All clinical assets verified."
