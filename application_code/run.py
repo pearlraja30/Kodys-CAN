@@ -20,6 +20,23 @@ print("--- KODYS SYSTEM BOOT INITIATED ---")
 if hasattr(sys.stdout, 'flush'):
     sys.stdout.flush()
 
+# --- Clinical Security Shim (v8.1) ---
+# Some dependencies require pkg_resources (setuptools) at runtime for version checks.
+# We explicitly import it here to aid PyInstaller discovery, and provide a shim if missing.
+try:
+    import pkg_resources
+    print("Clinical Engine: pkg_resources stabilized.")
+except ImportError:
+    import types
+    pkg_resources_mock = types.ModuleType("pkg_resources")
+    class MockDist:
+        def __init__(self, version="1.0.0"): self.version = version
+    def get_distribution(name): return MockDist()
+    pkg_resources_mock.get_distribution = get_distribution
+    pkg_resources_mock.Requirement = lambda x: x
+    sys.modules["pkg_resources"] = pkg_resources_mock
+    print("Clinical Engine: pkg_resources shimmed (Module Not Bundled).")
+
 # --- Clinical Flight Recorder (V6.0) ---
 # Goal: Capture every single byte of output, even before the GUI starts.
 

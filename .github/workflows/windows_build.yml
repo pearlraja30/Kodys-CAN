@@ -95,10 +95,14 @@ jobs:
           --hidden-import "django.contrib.sessions" `
           --hidden-import "django.contrib.messages" `
           --hidden-import "django.contrib.staticfiles" `
+          --hidden-import "pkg_resources" `
+          --hidden-import "setuptools" `
           --collect-all "heartpy" `
           --collect-all "pyhrv" `
           --collect-all "pkg_resources" `
           --collect-all "setuptools" `
+          --collect-submodules "pkg_resources" `
+          --collect-submodules "setuptools" `
           --copy-metadata "setuptools" `
           --copy-metadata "heartpy" `
           application_code\run.py

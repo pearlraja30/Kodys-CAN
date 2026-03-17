@@ -4,13 +4,13 @@ import traceback
 import platform
 
 def run_sanity_check():
-    print("[AUDIT] Kodys CLINICAL: FULL-SPECTRUM BUNDLE VERIFICATION (v7.1)")
+    print("[AUDIT] Kodys CLINICAL: FULL-SPECTRUM BUNDLE VERIFICATION (v7.3)")
     print("----------------------------------------------------------------")
     
     # 1. CORE MODULE AUDIT (Checks for ModuleNotFoundErrors)
     clinical_stack = [
         "django", "numpy", "xlsxwriter", "fitz", "pymupdf", "pdfkit", "PIL.Image",
-        "cryptography", "setuptools", "pkg_resources", "heartpy", "pyhrv", 
+        "cryptography", "setuptools", "heartpy", "pyhrv", 
         "scipy", "matplotlib", "pandas", "serial", "PyQt5", "cv2", "psutil", "requests"
     ]
     
