@@ -1,6 +1,19 @@
-#!/usr/bin/env python
 import os
 import sys
+
+# --- Clinical Security Shim (v8.1) ---
+try:
+    import pkg_resources
+except ImportError:
+    import types
+    pkg_resources_mock = types.ModuleType("pkg_resources")
+    class MockDist:
+        def __init__(self, version="1.0.0"): self.version = version
+    def get_distribution(name): return MockDist()
+    pkg_resources_mock.get_distribution = get_distribution
+    pkg_resources_mock.Requirement = lambda x: x
+    sys.modules["pkg_resources"] = pkg_resources_mock
+    print("Clinical Server: pkg_resources shimmed.")
 
 if __name__ == "__main__":
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")

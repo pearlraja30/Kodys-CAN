@@ -97,6 +97,7 @@ jobs:
           --hidden-import "django.contrib.staticfiles" `
           --hidden-import "pkg_resources" `
           --hidden-import "setuptools" `
+          --hidden-import "setuptools.extern" `
           --collect-all "heartpy" `
           --collect-all "pyhrv" `
           --collect-all "pkg_resources" `
