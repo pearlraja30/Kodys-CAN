@@ -4,9 +4,21 @@ import logging
 import traceback
 import platform
 
-# Early Heartbeat for Terminal Debug
+# --- PyInstaller Windowed Mode Fix ---
+# On Windows, sys.stdout and sys.stderr are None if the app is bundled without a console.
+# We must redirect them to a NullWriter to prevent crashes during the boot sequence.
+if sys.stdout is None:
+    class NullWriter(object):
+        def write(self, arg): pass
+        def flush(self): pass
+    sys.stdout = NullWriter()
+if sys.stderr is None:
+    sys.stderr = sys.stdout
+
+# Early Heartbeat for Terminal Debug (Now safe from NoneType crashes)
 print("--- KODYS SYSTEM BOOT INITIATED ---")
-sys.stdout.flush()
+if hasattr(sys.stdout, 'flush'):
+    sys.stdout.flush()
 
 # --- Clinical Flight Recorder (V6.0) ---
 # Goal: Capture every single byte of output, even before the GUI starts.
