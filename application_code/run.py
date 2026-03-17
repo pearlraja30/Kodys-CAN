@@ -2696,6 +2696,8 @@ if __name__ == "__main__":
     # Application settings
     settings = {
         "debug": DEBUG_MODE,
+        "product_name": "KodysClinicalDesktop",
+        "user_agent": "KodysClinicalDesktop/8.0 (Clinical Diagnostic Suite)",
         "log_severity": cefpython.LOGSEVERITY_INFO,
         "log_file": GetApplicationPath("debug.log"),
         "release_dcheck_enabled": True,
@@ -2714,8 +2716,8 @@ if __name__ == "__main__":
 
     app = CefApplication(sys.argv)
     
-    if kodys_license is not None:
-        kodys_license.ensure_licensed(app)
+    # We no longer block at startup. 
+    # License is now checked inside the medical service views in Django.
 
     # Create and display the splash screen
     app_dir_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))

@@ -50,36 +50,69 @@ def run_sanity_check():
         found = False
         checked_paths = []
         for root in search_roots:
-            asset_path = os.path.join(root, asset)
+            # Ensure root is absolute for reliable checking
+            abs_root = os.path.abspath(root)
+            # Standard root check
+            asset_path = os.path.join(abs_root, asset)
+            # PyInstaller 6.x _internal check
+            internal_asset_path = os.path.join(abs_root, "_internal", asset)
+            
             checked_paths.append(asset_path)
+            checked_paths.append(internal_asset_path)
+            
             if os.path.exists(asset_path):
                 print(f"  [OK] Asset Found: {asset}")
                 found = True
                 break
+            elif os.path.exists(internal_asset_path):
+                print(f"  [OK] Asset Found (Internal): {asset}")
+                found = True
+                break
         
         if not found:
-            # Final fallback: check relative to script in case of local execution
-            if os.path.exists(os.path.join(os.getcwd(), "dist", "KodysCAN", asset)):
-                 print(f"  [OK] Asset Found (Fallback): {asset}")
-                 found = True
+            # Final fallback: check both potential names
+            for fallback_name in ["Kodys Foot Clinik", "KodysCAN"]:
+                fallback_path = os.path.join(os.getcwd(), "dist", fallback_name, asset)
+                checked_paths.append(fallback_path)
+                if os.path.exists(fallback_path):
+                    print(f"  [OK] Asset Found (Fallback): {asset} in {fallback_name}")
+                    found = True
+                    break
             
         if not found:
             print(f"  [X] ASSET MISSING: {asset}")
-            # print(f"      (Scanned paths: {checked_paths})")
+            print(f"      Checked paths:")
+            for p in checked_paths:
+                print(f"        - {p}")
             failed_assets.append(asset)
 
     # 3. CLINICAL SERVER HANDSHAKE
     print("\n[3/3] Testing Clinical Server Initialization...")
     engine_found = False
     for root in search_roots:
-        if os.path.exists(os.path.join(root, "app_config", "manage.py")) or \
-           os.path.exists(os.path.join(root, "app_config", "manage.pyc")):
-            print("  [OK] Clinical Management Engine Detected.")
-            engine_found = True
+        abs_root = os.path.abspath(root)
+        # Check both the root and the _internal subdirectory
+        paths_to_check = [
+            os.path.join(abs_root, "app_config", "manage.py"),
+            os.path.join(abs_root, "app_config", "manage.pyc"),
+            os.path.join(abs_root, "_internal", "app_config", "manage.py"),
+            os.path.join(abs_root, "_internal", "app_config", "manage.pyc")
+        ]
+        for path in paths_to_check:
+            if os.path.exists(path):
+                print(f"  [OK] Clinical Management Engine Detected at: {os.path.relpath(path, abs_root)}")
+                engine_found = True
+                break
+        if engine_found:
             break
     
     if not engine_found:
         print("  [X] ERROR: Clinical Management Engine (manage.py) is missing!")
+        print("      Ensure it is bundled (check --add-data). Expected at one of:")
+        for root in search_roots:
+             abs_root = os.path.abspath(root)
+             print(f"        - {os.path.join(abs_root, 'app_config', 'manage.py')}")
+             print(f"        - {os.path.join(abs_root, '_internal', 'app_config', 'manage.py')}")
         failed_assets.append("app_config/manage.py")
 
     print("\n----------------------------------------------------------------")

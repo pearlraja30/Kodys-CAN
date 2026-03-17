@@ -20,7 +20,53 @@ login_url = "/signin/"
 logger = logging.getLogger(settings.LOGGER_FILE_NAME)
 
 
-# Create your views here.
+from functools import wraps
+
+def clinical_license_required(view_func):
+    """
+    Unified Guard: Ensures that medical diagnostic services are only accessible
+    if the system is cryptographically licensed.
+    
+    Rule: Website admin login is always allowed, but App-based clinical services
+    require an active station license.
+    """
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        # Identify if request comes from the Professional Desktop Suite
+        # We look for the custom User-Agent established in run.py
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        is_clinical_app = "KodysClinicalDesktop" in user_agent
+        
+        if is_clinical_app:
+            from . import license_core
+            if not license_core.is_system_licensed():
+                logger.warning(f"Clinical Access Blocked: Hardware Station not licensed. HWID: {license_core.get_hardware_id()}")
+                return HttpResponseRedirect(reverse('license_activation'))
+        
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
+@login_required(login_url=login_url)
+def home(request):
+    fn = ulo._fn()
+    template_name = fn
+    result = False
+    msg = ""
+    logger.info(ulo.start_log(request, fn))
+    try:
+        (
+            result,
+            msg,
+            kodys_apps,
+            doctors,
+            examiners,
+            last_test_doctor,
+            last_test_examiner,
+        ) = api.home(request)
+    except Exception as e:
+        logger.error(ulo.error_log(request, sys.exc_traceback.tb_lineno, e))
+    logger.info(ulo.end_log(request, fn))
+    return render(request, ulo.get_template_name(request, template_name), locals())
 def about(request):
     fn = ulo._fn()
     template_name = fn
@@ -66,10 +112,8 @@ def signin(request):
     msg = ""
     logger.info(ulo.start_log(request, fn))
     try:
-        from . import license_core
-        if not license_core.is_system_licensed():
-            return HttpResponseRedirect(reverse('license_activation'))
-
+        # Website login is now unrestricted for license purposes.
+        # This allows admins to manage keys even if the app isn't active.
         if request.user.is_authenticated:
             return HttpResponseRedirect(reverse("home"))
 
@@ -278,31 +322,31 @@ def signout(request):
 
     except Exception as e:
         logger.error(ulo.error_log(request, sys.exc_traceback.tb_lineno, e))
-    logger.info(ulo.end_log(request, fn))
-    return render(request, ulo.get_template_name(request, template_name), locals())
 
+from functools import wraps
 
-@login_required(login_url=login_url)
-def home(request):
-    fn = ulo._fn()
-    template_name = fn
-    result = False
-    msg = ""
-    logger.info(ulo.start_log(request, fn))
-    try:
-        (
-            result,
-            msg,
-            kodys_apps,
-            doctors,
-            examiners,
-            last_test_doctor,
-            last_test_examiner,
-        ) = api.home(request)
-    except Exception as e:
-        logger.error(ulo.error_log(request, sys.exc_traceback.tb_lineno, e))
-    logger.info(ulo.end_log(request, fn))
-    return render(request, ulo.get_template_name(request, template_name), locals())
+def clinical_license_required(view_func):
+    """
+    Unified Guard: Ensures that medical diagnostic services are only accessible
+    if the system is cryptographically licensed.
+    
+    Rule: Website admin login is always allowed, but App-based clinical services
+    require an active station license.
+    """
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        # Identify if request comes from the Professional Desktop Suite
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        is_clinical_app = "KodysClinicalDesktop" in user_agent
+        
+        if is_clinical_app:
+            from . import license_core
+            if not license_core.is_system_licensed():
+                logger.warning(f"Clinical Access Blocked: Station not licensed. HWID: {license_core.get_hardware_id()}")
+                return HttpResponseRedirect(reverse('license_activation'))
+        
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
 
 
 @login_required(login_url=login_url)
@@ -789,9 +833,8 @@ def test_referred(request):
     return HttpResponse(result)
 
 
-login_required(login_url=login_url)
-
-
+@login_required(login_url=login_url)
+@clinical_license_required
 def doppler(
     request,
     patient_uid,
@@ -874,9 +917,8 @@ def doppler_graphical(
     return render(request, ulo.get_template_name(request, template_name), locals())
 
 
-login_required(login_url=login_url)
-
-
+@login_required(login_url=login_url)
+@clinical_license_required
 def vpt_foot(
     request,
     patient_uid,
@@ -934,9 +976,8 @@ def vpt_foot(
     return render(request, ulo.get_template_name(request, template_name), locals())
 
 
-login_required(login_url=login_url)
-
-
+@login_required(login_url=login_url)
+@clinical_license_required
 def vpt_hand(
     request,
     patient_uid,
@@ -991,9 +1032,8 @@ def vpt_hand(
     return render(request, ulo.get_template_name(request, template_name), locals())
 
 
-login_required(login_url=login_url)
-
-
+@login_required(login_url=login_url)
+@clinical_license_required
 def vpt_other(
     request,
     patient_uid,
@@ -1048,9 +1088,8 @@ def vpt_other(
     return render(request, ulo.get_template_name(request, template_name), locals())
 
 
-login_required(login_url=login_url)
-
-
+@login_required(login_url=login_url)
+@clinical_license_required
 def vpt_ultra_foot(
     request,
     patient_uid,
@@ -1108,9 +1147,8 @@ def vpt_ultra_foot(
     return render(request, ulo.get_template_name(request, template_name), locals())
 
 
-login_required(login_url=login_url)
-
-
+@login_required(login_url=login_url)
+@clinical_license_required
 def vpt_ultra_hand(
     request,
     patient_uid,
@@ -1165,9 +1203,8 @@ def vpt_ultra_hand(
     return render(request, ulo.get_template_name(request, template_name), locals())
 
 
-login_required(login_url=login_url)
-
-
+@login_required(login_url=login_url)
+@clinical_license_required
 def vpt_ultra_other(
     request,
     patient_uid,
@@ -1222,9 +1259,8 @@ def vpt_ultra_other(
     return render(request, ulo.get_template_name(request, template_name), locals())
 
 
-login_required(login_url=login_url)
-
-
+@login_required(login_url=login_url)
+@clinical_license_required
 def thermocool_foot(
     request,
     patient_uid,
@@ -1282,9 +1318,8 @@ def thermocool_foot(
     return render(request, ulo.get_template_name(request, template_name), locals())
 
 
-login_required(login_url=login_url)
-
-
+@login_required(login_url=login_url)
+@clinical_license_required
 def thermocool_hand(
     request,
     patient_uid,
@@ -1340,9 +1375,8 @@ def thermocool_hand(
     return render(request, ulo.get_template_name(request, template_name), locals())
 
 
-login_required(login_url=login_url)
-
-
+@login_required(login_url=login_url)
+@clinical_license_required
 def thermocool_other(
     request,
     patient_uid,
@@ -1597,9 +1631,8 @@ def test_patient_graphical_edit(
     return HttpResponse(result)
 
 
-login_required(login_url=login_url)
-
-
+@login_required(login_url=login_url)
+@clinical_license_required
 def podo_i_mat(
     request,
     patient_uid,
@@ -1640,6 +1673,7 @@ def podo_i_mat(
 
 
 @login_required(login_url=login_url)
+@clinical_license_required
 def podo_t_map(
     request,
     patient_uid,
@@ -1680,6 +1714,7 @@ def podo_t_map(
 
 
 @login_required(login_url=login_url)
+@clinical_license_required
 def doppler_graphical_template(request):
     fn = ulo._fn()
     template_name = fn
@@ -1700,6 +1735,7 @@ def doppler_graphical_template(request):
 
 
 @login_required(login_url=login_url)
+@clinical_license_required
 def kodys_can(
     request,
     patient_uid,
@@ -1780,6 +1816,8 @@ def kodys_can(
 login_required(login_url=login_url)
 
 
+@login_required(login_url=login_url)
+@clinical_license_required
 def kodys_can_sympathetic(
     request,
     patient_uid,
@@ -1850,6 +1888,8 @@ def kodys_can_sympathetic(
 login_required(login_url=login_url)
 
 
+@login_required(login_url=login_url)
+@clinical_license_required
 def kodys_can_hrv(
     request,
     patient_uid,

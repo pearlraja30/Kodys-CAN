@@ -82,6 +82,7 @@ TEMPLATES = [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
+                "django.template.context_processors.media",
                 "django.contrib.messages.context_processors.messages",
                 "app_config.context_processors.app_config",
             ],
@@ -141,7 +142,18 @@ USE_TZ = False
 
 STATIC_URL = "/static/"
 DATA_URL = "/site_data/"
-MEDIA_ROOT = os.path.join(KODYS_DATA_DIR, "media")
+
+# --- Clinical Asset Discovery ---
+if getattr(sys, 'frozen', False):
+    # Production: Bundled assets
+    MEDIA_ROOT = os.path.join(KODYS_DATA_DIR, "media")
+else:
+    # Development: Source assets (check both potential layouts)
+    _local_media = os.path.join(BASE_DIR, "..", "app_assets", "media")
+    if not os.path.exists(_local_media):
+        _local_media = os.path.join(BASE_DIR, "app_assets", "media")
+    MEDIA_ROOT = _local_media
+
 MEDIA_DATA = os.path.join(KODYS_DATA_DIR, "DATA")
 DATA_UPLOAD_MAX_MEMORY_SIZE = 25000000
 

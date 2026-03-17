@@ -153,16 +153,29 @@ jobs:
         sed -i '' '1s/.*/#!\/bin\/bash/' "dmg_source/🛡️_ENABLE_SECURITY.command"
         chmod +x "dmg_source/🛡️_ENABLE_SECURITY.command"
         
-        echo "Stabilizing filesystem for clinical mastering..."
+        echo "Stabilizing filesystem for Clinical Shield mastering..."
         sync
         sleep 10
-        echo "Metadata check:"
-        ls -la dmg_source/
         
-        # Mastery v2.0: Using hybrid-isolation to prevent 'Resource busy' locks
-        hdiutil makehybrid -hfs -hfs-volume-name "KodysCAN-Setup" -o tmp.iso dmg_source
-        hdiutil convert tmp.iso -format UDZO -imagekey zlib-level=9 -o KodysCAN_macOS_Setup.dmg
-        rm tmp.iso
+        # Mastery v3.0: Clinical Shield Protocol (Bypasses filesystem locks)
+        echo "Initializing Master Virtual Buffer..."
+        hdiutil create -size 300m -fs HFS+ -volname "KodysCAN-Setup" -ov MASTER_BUFFER.dmg
+        
+        echo "Mounting Virtual Buffer..."
+        hdiutil attach -mountpoint /tmp/kodys_master MASTER_BUFFER.dmg
+        
+        echo "Transferring Clinical Assets..."
+        cp -Rf dmg_source/* /tmp/kodys_master/
+        
+        echo "Finalizing Master Stream..."
+        hdiutil detach /tmp/kodys_master
+        
+        echo "Converting to Production DMG..."
+        hdiutil convert MASTER_BUFFER.dmg -format UDZO -imagekey zlib-level=9 -o KodysCAN_macOS_Setup.dmg
+        
+        echo "Sanitizing workspace..."
+        rm MASTER_BUFFER.dmg
+        rm -rf dmg_source
 
     - name: Upload macOS Artifact
       uses: actions/upload-artifact@v4
