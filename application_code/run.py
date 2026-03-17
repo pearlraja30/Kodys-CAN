@@ -20,22 +20,6 @@ print("--- KODYS SYSTEM BOOT INITIATED ---")
 if hasattr(sys.stdout, 'flush'):
     sys.stdout.flush()
 
-# --- Clinical Security Shim (v8.1) ---
-# Some dependencies require pkg_resources (setuptools) at runtime for version checks.
-# We explicitly import it here to aid PyInstaller discovery, and provide a shim if missing.
-try:
-    import pkg_resources
-    logger.info("Clinical Engine: pkg_resources stabilized.")
-except ImportError:
-    import types
-    pkg_resources_mock = types.ModuleType("pkg_resources")
-    class MockDist:
-        def __init__(self, version="1.0.0"): self.version = version
-    def get_distribution(name): return MockDist()
-    pkg_resources_mock.get_distribution = get_distribution
-    pkg_resources_mock.Requirement = lambda x: x
-    sys.modules["pkg_resources"] = pkg_resources_mock
-    logger.warning("Clinical Engine: pkg_resources shimmed (CRITICAL: Module Not Bundled).")
 
 # --- Clinical Flight Recorder (V6.0) ---
 # Goal: Capture every single byte of output, even before the GUI starts.
@@ -91,6 +75,22 @@ sys.stdout = StreamToLogger(logger, logging.INFO)
 sys.stderr = StreamToLogger(logger, logging.ERROR)
 
 logger.info("=== KODYS CLINICAL FLIGHT RECORDER ACTIVE ===")
+
+# --- Clinical Security Shim (v8.1) ---
+# Some dependencies require pkg_resources (setuptools) at runtime for version checks.
+try:
+    import pkg_resources
+    logger.info("Clinical Engine: pkg_resources stabilized.")
+except ImportError:
+    import types
+    pkg_resources_mock = types.ModuleType("pkg_resources")
+    class MockDist:
+        def __init__(self, version="1.0.0"): self.version = version
+    def get_distribution(name): return MockDist()
+    pkg_resources_mock.get_distribution = get_distribution
+    pkg_resources_mock.Requirement = lambda x: x
+    sys.modules["pkg_resources"] = pkg_resources_mock
+    logger.warning("Clinical Engine: pkg_resources shimmed (CRITICAL: Module Not Bundled).")
 logger.info(f"System: {platform.system()} {platform.release()}")
 logger.info(f"Python: {sys.version}")
 logger.info(f"Executable: {sys.executable}")
