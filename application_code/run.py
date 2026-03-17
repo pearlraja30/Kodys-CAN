@@ -25,7 +25,7 @@ if hasattr(sys.stdout, 'flush'):
 # We explicitly import it here to aid PyInstaller discovery, and provide a shim if missing.
 try:
     import pkg_resources
-    print("Clinical Engine: pkg_resources stabilized.")
+    logger.info("Clinical Engine: pkg_resources stabilized.")
 except ImportError:
     import types
     pkg_resources_mock = types.ModuleType("pkg_resources")
@@ -35,7 +35,7 @@ except ImportError:
     pkg_resources_mock.get_distribution = get_distribution
     pkg_resources_mock.Requirement = lambda x: x
     sys.modules["pkg_resources"] = pkg_resources_mock
-    print("Clinical Engine: pkg_resources shimmed (Module Not Bundled).")
+    logger.warning("Clinical Engine: pkg_resources shimmed (CRITICAL: Module Not Bundled).")
 
 # --- Clinical Flight Recorder (V6.0) ---
 # Goal: Capture every single byte of output, even before the GUI starts.
@@ -75,9 +75,17 @@ class StreamToLogger:
         self.linebuf = ''
     def write(self, buf):
         for line in buf.rstrip().splitlines():
-            self.logger.log(self.level, line.rstrip())
+            msg = line.rstrip()
+            if msg:
+                self.logger.log(self.level, msg)
+                # Force every single line to disk immediately for real-time clinical diagnostics
+                for handler in self.logger.handlers:
+                    if hasattr(handler, 'flush'):
+                        handler.flush()
     def flush(self):
-        pass
+        for handler in self.logger.handlers:
+            if hasattr(handler, 'flush'):
+                handler.flush()
 
 sys.stdout = StreamToLogger(logger, logging.INFO)
 sys.stderr = StreamToLogger(logger, logging.ERROR)
@@ -365,37 +373,8 @@ class MainFrame(QtGui.QWidget):
         windowInfo = cefpython.WindowInfo()
         windowInfo.SetAsChild(int(self.winId()))
         self.parent = parent
-        # Wait for the internal clinical server with a robust diagnostic loop
-        start_wait = time.time()
-        last_log = 0
-        while True:
-            elapsed = time.time() - start_wait
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(0.5)
-            result = sock.connect_ex(("127.0.0.1", 5423))
-            sock.close()
-            
-            if result == 0:
-                logger.info("Internal Clinical Server Connected Successfully.")
-                break
-            
-            if int(elapsed) > last_log:
-                logger.debug(f"Handshake Logic: Waiting for server port 5423... ({int(elapsed)}s elapsed, status={result})")
-                last_log = int(elapsed)
-            
-            # Check for timeout (expanded safety buffer)
-            if elapsed > 65:
-                logger.error("FATAL: Clinical Server timed out after 65 seconds.")
-                QtGui.QMessageBox.critical(
-                    self, 
-                    "System Error", 
-                    "The Clinical Database Server failed to start.\n\nPlease check 'kodys_debug.log' and contact support."
-                )
-                sys.exit(1)
-
-            # Allow the GUI to remain responsive while waiting
-            QtGui.QApplication.processEvents()
-            time.sleep(0.1)
+        
+        # At this point, waitForServer has already succeeded in the main block
         self.browser = cefpython.CreateBrowserSync(
             windowInfo,
             browserSettings={},
@@ -2749,14 +2728,59 @@ if __name__ == "__main__":
         " QProgressBar { border: 1px solid black; border-radius: 0px; text-align: center;font-size:16px;color:black; } QProgressBar::chunk {background-color: #3add36; width: 1px;}"
     )
     splash.show()
+    
+    # --- Real-Time Bootstrap Handshake ---
+    statusLabel = QtGui.QLabel(splash)
+    statusLabel.setGeometry(10, splash_pix.height() - 75, splash_pix.width() - 20, 25)
+    statusLabel.setStyleSheet("color: #FFFFFF; font-weight: bold; font-family: 'Roboto', 'Arial'; font-size: 13px;")
+    statusLabel.setAlignment(QtCore.Qt.AlignCenter)
+    statusLabel.show()
+
+    def update_boot_progress(elapsed, status_text):
+        progress = min(10, int((elapsed / 65.0) * 10))
+        progressBar.setValue(progress)
+        statusLabel.setText(status_text)
+        app.processEvents()
+
+    logger.info("Synchronizing Clinical Environment...")
+    update_boot_progress(5, "Initializing Clinical Data...")
+
+    # Wait for the internal clinical server with real-time feedback
+    start_wait = time.time()
+    server_ready = False
+    while True:
+        elapsed = time.time() - start_wait
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.5)
+        result = sock.connect_ex(("127.0.0.1", 5423))
+        sock.close()
+
+        if result == 0:
+            logger.info("Internal Clinical Server Handshake Successful.")
+            update_boot_progress(65, "Clinical Engine Ready.")
+            server_ready = True
+            break
+        
+        update_boot_progress(elapsed, f"Connecting to Clinical Database... ({int(elapsed)}s)")
+        
+        if elapsed > 70: # Safety buffer
+            logger.error("FATAL: Clinical Server timed out.")
+            statusLabel.setText("Database Connection Failed.")
+            app.processEvents()
+            break
+        
+        time.sleep(0.5)
+
+    if not server_ready:
+        QtGui.QMessageBox.critical(
+            None, 
+            "System Error", 
+            "The Clinical Database Server failed to start.\n\nPlease check 'KODYS_EMERGENCY_DEBUG.log' on your Desktop."
+        )
+        sys.exit(1)
 
     mainWindow = MainWindow()
     mainWindow.show()
-    for i in range(1, 11):
-        progressBar.setValue(i)
-        t = time.time()
-        while time.time() < t + 0.1:
-            app.processEvents()
     splash.finish(mainWindow)
     
     if kodys_updater is not None:
