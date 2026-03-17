@@ -157,9 +157,9 @@ jobs:
         sync
         sleep 10
         
-        # Mastery v3.0: Clinical Shield Protocol (Bypasses filesystem locks)
-        echo "Initializing Master Virtual Buffer..."
-        hdiutil create -size 300m -fs HFS+ -volname "KodysCAN-Setup" -ov MASTER_BUFFER.dmg
+        # Mastery v3.1: Expanded Clinical Shield Protocol (Bypasses filesystem locks)
+        echo "Initializing Master Virtual Buffer (1.5GB)..."
+        hdiutil create -size 1.5g -fs HFS+ -volname "KodysCAN-Setup" -ov MASTER_BUFFER.dmg
         
         echo "Mounting Virtual Buffer..."
         hdiutil attach -mountpoint /tmp/kodys_master MASTER_BUFFER.dmg
