@@ -4,7 +4,7 @@ import traceback
 import platform
 
 def run_sanity_check():
-    print("[AUDIT] Kodys CLINICAL: FULL-SPECTRUM BUNDLE VERIFICATION (v7.0)")
+    print("[AUDIT] Kodys CLINICAL: FULL-SPECTRUM BUNDLE VERIFICATION (v7.1)")
     print("----------------------------------------------------------------")
     
     # 1. CORE MODULE AUDIT (Checks for ModuleNotFoundErrors)
@@ -22,51 +22,65 @@ def run_sanity_check():
     for module_name in clinical_stack:
         try:
             __import__(module_name)
-            # print(f"  [OK] {module_name}")
         except Exception as e:
             print(f"  [X] FAILED: {module_name} ({e})")
             failed_modules.append(module_name)
 
-    # 2. ASSET INTEGRITY AUDIT (Checks for Missing Folders/Files)
+    # 2. ASSET INTEGRITY AUDIT (Cross-Platform Path Resolver)
     print("\n[2/3] Auditing Physical Clinical Assets...")
-    # Discover the bundle path (PYTHONPATH should be set to the bundle root during audit)
-    bundle_root = sys.path[0]
-    required_assets = [
-        "app_config", "kodys", "app_assets", "config", "db.sqlite3"
-    ]
     
-    # Platform specific binary checks
-    if sys.platform == "win32":
-        required_assets.append("wkhtmltopdf")
-    else:
-        # On Mac, it's bundled in a specific subfolder or at root depending on build
-        required_assets.append("wkhtmltopdf")
+    # Discovery: Check multiple potential bundle roots for cross-platform compatibility
+    # Priority: Env Var > sys.path[0] > Current Dir
+    search_roots = []
+    if os.environ.get("BUNDLE_ROOT"):
+        search_roots.append(os.environ.get("BUNDLE_ROOT"))
+    
+    # Add standard PyInstaller paths
+    for p in sys.path:
+        if "dist" in p:
+            search_roots.append(p)
+            # Mac specific resource path
+            if ".app/Contents/MacOS" in p:
+                search_roots.append(p.replace("Contents/MacOS", "Contents/Resources"))
 
+    required_assets = ["app_config", "kodys", "app_assets", "config", "db.sqlite3", "wkhtmltopdf"]
     failed_assets = []
+
     for asset in required_assets:
-        asset_path = os.path.join(bundle_root, asset)
-        if os.path.exists(asset_path):
-            print(f"  [OK] Asset Found: {asset}")
-        else:
-            print(f"  [X] ASSET MISSING: {asset} (Expected at: {asset_path})")
+        found = False
+        checked_paths = []
+        for root in search_roots:
+            asset_path = os.path.join(root, asset)
+            checked_paths.append(asset_path)
+            if os.path.exists(asset_path):
+                print(f"  [OK] Asset Found: {asset}")
+                found = True
+                break
+        
+        if not found:
+            # Final fallback: check relative to script in case of local execution
+            if os.path.exists(os.path.join(os.getcwd(), "dist", "KodysCAN", asset)):
+                 print(f"  [OK] Asset Found (Fallback): {asset}")
+                 found = True
+            
+        if not found:
+            print(f"  [X] ASSET MISSING: {asset}")
+            # print(f"      (Scanned paths: {checked_paths})")
             failed_assets.append(asset)
 
-    # 3. CLINICAL SERVER HANDSHAKE (Dry Run)
+    # 3. CLINICAL SERVER HANDSHAKE
     print("\n[3/3] Testing Clinical Server Initialization...")
-    try:
-        # We try to import manage.py from the bundle to see if Django is properly configured
-        manage_py_path = os.path.join(bundle_root, "app_config", "manage.py")
-        if not os.path.exists(manage_py_path):
-             manage_py_path = os.path.join(bundle_root, "app_config", "manage.pyc")
-             
-        if os.path.exists(manage_py_path):
+    engine_found = False
+    for root in search_roots:
+        if os.path.exists(os.path.join(root, "app_config", "manage.py")) or \
+           os.path.exists(os.path.join(root, "app_config", "manage.pyc")):
             print("  [OK] Clinical Management Engine Detected.")
-        else:
-            print("  [X] ERROR: Clinical Management Engine (manage.py) is missing from the bundle!")
-            failed_assets.append("app_config/manage.py")
-    except Exception as e:
-        print(f"  [X] Initialization Failure: {e}")
-        failed_assets.append("initialization_logic")
+            engine_found = True
+            break
+    
+    if not engine_found:
+        print("  [X] ERROR: Clinical Management Engine (manage.py) is missing!")
+        failed_assets.append("app_config/manage.py")
 
     print("\n----------------------------------------------------------------")
     if not failed_modules and not failed_assets:
@@ -74,9 +88,6 @@ def run_sanity_check():
         sys.exit(0)
     else:
         print(f"[CRITICAL FAILURE] Audit identified {len(failed_modules) + len(failed_assets)} issues.")
-        if failed_modules: print(f"  Missing Libraries: {', '.join(failed_modules)}")
-        if failed_assets: print(f"  Missing Assets: {', '.join(failed_assets)}")
-        print("\nFATAL: Build aborted. This installer would have failed in production.")
         sys.exit(1)
 
 if __name__ == "__main__":
