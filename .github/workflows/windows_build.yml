@@ -100,12 +100,16 @@ jobs:
           --hidden-import "setuptools.extern" `
           --collect-all "heartpy" `
           --collect-all "pyhrv" `
+          --collect-all "spectrum" `
+          --collect-all "matplotlib" `
           --collect-all "pkg_resources" `
           --collect-all "setuptools" `
           --collect-submodules "pkg_resources" `
           --collect-submodules "setuptools" `
           --copy-metadata "setuptools" `
           --copy-metadata "heartpy" `
+          --copy-metadata "spectrum" `
+          --copy-metadata "matplotlib" `
           application_code\run.py
 
     - name: Run Bundle Sanity Audit (Pre-Installer Check)

@@ -43,7 +43,10 @@ def run_sanity_check():
             if ".app/Contents/MacOS" in p:
                 search_roots.append(p.replace("Contents/MacOS", "Contents/Resources"))
 
-    required_assets = ["app_config", "kodys", "app_assets", "config", "db.sqlite3", "wkhtmltopdf"]
+    required_assets = [
+        "app_config", "kodys", "app_assets", "config", "db.sqlite3", "wkhtmltopdf",
+        os.path.join("spectrum", "data", "DOLPHINS.wav")
+    ]
     failed_assets = []
 
     for asset in required_assets:
