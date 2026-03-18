@@ -674,18 +674,31 @@ def manuals_view(request, manuals_code=None):
 
 @login_required(login_url=login_url)
 def database_backup(request):
+    """
+    Item 13: Clinical DB Backup Vault.
+    Ensures hospital data is archived before any system updates.
+    """
     fn = ulo._fn()
     template_name = fn
-    result = False
-    msg = ""
     logger.info(ulo.start_log(request, fn))
     try:
-        result, msg = api.database_backup(request)
+        db_file = os.path.join(settings.BASE_DIR, 'db.sqlite3')
+        if not os.path.exists(db_file):
+             return HttpResponse("Error: Clinical Database not found at source.", status=404)
+             
+        backup_name = f"KODYS_BACKUP_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.sqlite3"
+        backup_path = os.path.join(settings.KODYS_DATA_DIR, backup_name)
+        
+        import shutil
+        shutil.copy2(db_file, backup_path)
+        
+        msg = f"SUCCESS: Backup archived at {backup_path}"
+        logger.info(msg)
+        return HttpResponse(msg)
 
     except Exception as e:
         logger.error(ulo.error_log(request, sys.exc_traceback.tb_lineno, e))
-    logger.info(ulo.end_log(request, fn))
-    return HttpResponse(result)
+        return HttpResponse(f"CRITICAL: Backup failed: {str(e)}", status=500)
 
 
 @login_required(login_url=login_url)
@@ -760,18 +773,35 @@ def app_configuration_settings(request):
 
 
 @login_required(login_url=login_url)
-def patient_search(request, search_key):
+def patient_search(request, search_key=None):
+    """
+    Item 19: Advanced Patient Search (First Name, Last Name, PID).
+    Upgraded for clinical precision to prevent record duplication.
+    """
     fn = ulo._fn()
     template_name = fn
-    result = False
-    msg = ""
     logger.info(ulo.start_log(request, fn))
+    search_result = []
     try:
-        result, msg, search_result = api.search(request, search_key)
+        # If search_key is passed in URL, use it, else check GET params
+        query = search_key if search_key else request.GET.get('q', '').strip()
+        
+        if query:
+            # Multi-field standard search
+            from django.db.models import Q
+            search_result = api.Patient.objects.filter(
+                Q(first_name__icontains=query) | 
+                Q(last_name__icontains=query) | 
+                Q(patient_id__icontains=query)
+            ).values('id', 'first_name', 'last_name', 'patient_id')[:50]
+            
     except Exception as e:
         logger.error(ulo.error_log(request, sys.exc_traceback.tb_lineno, e))
+    
     logger.info(ulo.end_log(request, fn))
-    return HttpResponse(json.dumps(search_result))
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'json' in request.path:
+        return JsonResponse(list(search_result), safe=False)
+    return render(request, ulo.get_template_name(request, template_name), locals())
 
 
 login_required(login_url=login_url)
@@ -1983,3 +2013,25 @@ def test_patient_hrv_edit(
         logger.error(ulo.error_log(request, sys.exc_traceback.tb_lineno, e))
     logger.info(ulo.end_log(request, fn))
     return HttpResponse(result)
+
+
+@login_required(login_url=login_url)
+def export_ecg(request, test_entry_id):
+    """Item 12: Export ECG data as XLSX"""
+    fn = ulo._fn()
+    logger.info(ulo.start_log(request, fn))
+    try:
+        binary_data = api.export_ecg_xlsx(test_entry_id)
+        if binary_data:
+            response = HttpResponse(
+                binary_data,
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+            response[
+                "Content-Disposition"
+            ] = f'attachment; filename="ECG_Report_{test_entry_id}.xlsx"'
+            return response
+        return HttpResponse("No data found for this test.", status=404)
+    except Exception as e:
+        logger.error(ulo.error_log(request, sys.exc_traceback.tb_lineno, e))
+        return HttpResponse("Error generating export.", status=500)

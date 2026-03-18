@@ -45,7 +45,9 @@ def run_sanity_check():
 
     required_assets = [
         "app_config", "kodys", "app_assets", "config", "db.sqlite3", "wkhtmltopdf",
-        os.path.join("spectrum", "data", "DOLPHINS.wav")
+        os.path.join("spectrum", "data", "DOLPHINS.wav"),
+        os.path.join("nolds", "datasets", "brown72.npy"),
+        os.path.join("matplotlib", "mpl-data", "fonts", "afm"),
     ]
     failed_assets = []
 

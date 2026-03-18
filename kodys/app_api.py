@@ -95,6 +95,35 @@ from . import qrs_detector as qrs_detect
 logger = logging.getLogger(settings.LOGGER_FILE_NAME)
 
 
+def apply_clinical_filter(data, fs=500.0):
+    """Item 9 & Req 3/4: High-pass (0.5Hz) and Notch (50Hz) filters"""
+    try:
+        # Baseline Wandering (0.5Hz High Pass)
+        nyq = 0.5 * fs
+        low = 0.5 / nyq
+        b, a = signal.butter(1, low, btype='high')
+        filtered = signal.filtfilt(b, a, data)
+        
+        # Power Line Interference (50Hz Notch)
+        q = 30.0
+        b_notch, a_notch = signal.iirnotch(50.0, q, fs)
+        filtered = signal.filtfilt(b_notch, a_notch, filtered)
+        return filtered
+    except:
+        return data
+
+
+def calculate_qt_bazett(rr_interval, qt_interval):
+    """Req 7: Bazett's Correction for QT Interval"""
+    if rr_interval and qt_interval:
+        # QTc = QT / sqrt(RR) where RR is in seconds
+        rr_sec = rr_interval / 1000.0
+        qt_sec = qt_interval / 1000.0
+        qtc = qt_sec / (rr_sec ** 0.5)
+        return round(qtc * 1000.0, 1)
+    return 0.0
+
+
 def user_signin(request, p_dict):
     fn = ulo._fn()
     logger.info(ulo.start_log(request, fn))

@@ -1640,8 +1640,8 @@ class External(object):
                                         parity="N",
                                         stopbits=1,
                                         xonxoff=0,
-                                        write_timeout=0.3,
-                                        timeout=2,
+                                        write_timeout=0.1,
+                                        timeout=0.1,
                                     )
                                     ser.write("Q")
                                     thread_connection = threading.Thread(
@@ -1930,8 +1930,8 @@ class External(object):
                                         parity="N",
                                         stopbits=1,
                                         xonxoff=0,
-                                        write_timeout=0.3,
-                                        timeout=2,
+                                        write_timeout=0.1,
+                                        timeout=0.1,
                                     )
                                     ser.write("Q")
                                     lead_off = False

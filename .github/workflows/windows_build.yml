@@ -102,6 +102,8 @@ jobs:
           --collect-all "pyhrv" `
           --collect-all "spectrum" `
           --collect-all "matplotlib" `
+          --collect-all "nolds" `
+          --collect-all "scipy" `
           --collect-all "pkg_resources" `
           --collect-all "setuptools" `
           --collect-submodules "pkg_resources" `

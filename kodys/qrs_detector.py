@@ -35,7 +35,7 @@ class QRSDetectorOffline(object):
         self.findpeaks_limit = 0.70
         self.findpeaks_spacing = 50  # Change proportionally when adjusting frequency (in samples).
 
-        self.refractory_period = 40  # Change proportionally when adjusting frequency (in samples).
+        self.refractory_period = 50  # Increased to 200ms at 250Hz to prevent double-triggering
         self.qrs_peak_filtering_factor = 0.125
         self.noise_peak_filtering_factor = 0.125
         self.qrs_noise_diff_weight = 0.25
@@ -208,6 +208,11 @@ class QRSDetectorOffline(object):
         plot_points(axis=axarr[5], values=self.ecg_data_detected, indices=self.qrs_peaks_indices)
 
         plt.tight_layout()
+        for ax in axarr:
+            ax.grid(which='major', color='red', linestyle='-', linewidth=0.8, alpha=0.3)
+            ax.grid(which='minor', color='red', linestyle=':', linewidth=0.5, alpha=0.1)
+            ax.minorticks_on()
+        
         fig.savefig(self.plot_path)
 
         if show_plot:
