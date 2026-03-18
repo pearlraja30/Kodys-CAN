@@ -34,7 +34,11 @@ try:
             if not attr.startswith('_'):
                 fake_gui_members[attr] = getattr(mod, attr)
     
-    create_module_shim('PyQt4.QtCore', {k: getattr(QtCore, k) for k in dir(QtCore) if not k.startswith('_')})
+    qt_members = {k: getattr(QtCore, k) for k in dir(QtCore) if not k.startswith('_')}
+    if 'WindowCancelButtonHint' not in qt_members:
+        qt_members['WindowCancelButtonHint'] = getattr(QtCore.Qt, 'WindowCloseButtonHint', 0)
+    
+    create_module_shim('PyQt4.QtCore', qt_members)
     create_module_shim('PyQt4.QtGui', fake_gui_members)
     create_module_shim('PyQt4.QtWebKit', {'QWebView': QtWebEngine.QWebEngineView})
     create_module_shim('PyQt4', {'QtCore': sys.modules['PyQt4.QtCore'], 
@@ -69,6 +73,7 @@ try:
         def Initialize(self, *a, **k): return True
         def CreateBrowserSync(self, *a, **k): return CEFBrowserShim()
         def MessageLoopWork(self): pass
+        def QuitMessageLoop(self): pass
         def Shutdown(self): pass
         def GetModuleDirectory(self): return ""
         def JavascriptBindings(self, **k): 
