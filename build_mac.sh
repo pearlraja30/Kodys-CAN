@@ -10,7 +10,12 @@ then
     exit 1
 fi
 
-# Step 2: Set up Virtual Environment
+# Step 2: Clean previous builds
+echo ""
+echo "[Step 0] Cleaning previous build artifacts..."
+rm -rf build dist .venv_mac
+
+# Step 3: Set up Virtual Environment
 echo ""
 echo "[Step 1] Setting up virtual environment..."
 python3 -m venv .venv_mac
