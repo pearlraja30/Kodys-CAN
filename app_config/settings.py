@@ -197,6 +197,11 @@ LOGGING = {
         "custom": {"format": "%(levelname)s %(asctime)s %(module)s %(message)s"},
         "simple": {"format": "%(levelname)s %(message)s"},
     },
+    "filters": {
+        "pii_filter": {
+            "()": "kodys.pii_logger.PIIMaskingFilter",
+        }
+    },
     "handlers": {
         "null": {
             "class": "logging.NullHandler",
@@ -209,11 +214,13 @@ LOGGING = {
             "when": "W4",
             "interval": 1,
             "backupCount": 7,
+            "filters": ["pii_filter"],
         },
         "console": {
             "level": "DEBUG",
             "class": "logging.StreamHandler",
             "formatter": "simple",
+            "filters": ["pii_filter"],
         },
         "mail_admins": {
             "level": "ERROR",
