@@ -63,6 +63,7 @@ python3 -m PyInstaller --noconfirm --onedir --windowed \
     --hidden-import "pdfkit" \
     --hidden-import "requests" \
     --hidden-import "psutil" \
+    --hidden-import "biosppy" \
     --hidden-import "django.contrib.admin" \
     --hidden-import "django.contrib.auth" \
     --hidden-import "django.contrib.contenttypes" \
@@ -71,6 +72,9 @@ python3 -m PyInstaller --noconfirm --onedir --windowed \
     --hidden-import "django.contrib.staticfiles" \
     --collect-all "heartpy" \
     --collect-all "pyhrv" \
+    --collect-all "biosppy" \
+    --collect-all "xlsxwriter" \
+    --collect-all "pdfkit" \
     --collect-all "pkg_resources" \
     --collect-all "setuptools" \
     --copy-metadata "setuptools" \
