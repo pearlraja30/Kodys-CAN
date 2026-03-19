@@ -39,6 +39,8 @@ python3 -m PyInstaller --noconfirm --onedir --windowed \
     --add-data "app_assets:app_assets" \
     --add-data "config:config" \
     --add-data "db.sqlite3:." \
+    --add-data ".venv_mac/lib/python3.13/site-packages/spectrum/data/DOLPHINS.wav:spectrum/data" \
+    --add-data ".venv_mac/lib/python3.13/site-packages/nolds/datasets/brown72.npy:nolds/datasets" \
     --name "KodysCAN" \
     --hidden-import "PyQt5.QtWebEngineWidgets" \
     --hidden-import "PyQt5.QtPrintSupport" \

@@ -44,11 +44,16 @@ def run_sanity_check():
                 search_roots.append(p.replace("Contents/MacOS", "Contents/Resources"))
 
     required_assets = [
-        "app_config", "kodys", "app_assets", "config", "db.sqlite3", "wkhtmltopdf",
+        "app_config", "kodys", "app_assets", "config", "db.sqlite3",
         os.path.join("spectrum", "data", "DOLPHINS.wav"),
         os.path.join("nolds", "datasets", "brown72.npy"),
         os.path.join("matplotlib", "mpl-data", "fonts", "afm"),
     ]
+    
+    # wkhtmltopdf is primarily used on Windows in the current CLI setup
+    if sys.platform == "win32":
+        required_assets.append("wkhtmltopdf")
+
     failed_assets = []
 
     for asset in required_assets:
