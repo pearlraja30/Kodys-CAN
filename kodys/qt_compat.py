@@ -35,8 +35,8 @@ try:
                 fake_gui_members[attr] = getattr(mod, attr)
     
     qt_members = {k: getattr(QtCore, k) for k in dir(QtCore) if not k.startswith('_')}
-    if 'WindowCancelButtonHint' not in qt_members:
-        qt_members['WindowCancelButtonHint'] = getattr(QtCore.Qt, 'WindowCloseButtonHint', 0)
+    if not hasattr(QtCore.Qt, 'WindowCancelButtonHint'):
+        setattr(QtCore.Qt, 'WindowCancelButtonHint', getattr(QtCore.Qt, 'WindowCloseButtonHint', 0))
     
     create_module_shim('PyQt4.QtCore', qt_members)
     create_module_shim('PyQt4.QtGui', fake_gui_members)
