@@ -28,13 +28,26 @@ python3 -m pip install --upgrade pip setuptools==69.0.3 wheel
 python3 -m pip install -r requirements.txt
 python3 -m pip install pyinstaller packaging
 
-# Resolve dynamic paths for clinical assets
+# Resolve dynamic paths and stage clinical assets locally
+echo "[Step 2.5] Staging clinical assets locally..."
 SPECTRUM_WAV=$(python3 -c "import spectrum, os; print(os.path.join(os.path.dirname(spectrum.__file__), 'data', 'DOLPHINS.wav'))")
 NOLDS_NPY=$(python3 -c "import nolds, os; print(os.path.join(os.path.dirname(nolds.__file__), 'datasets', 'brown72.npy'))")
 
-echo "[DEBUG] Resolved Spectrum Asset: $SPECTRUM_WAV"
-echo "[DEBUG] Resolved Nolds Asset: $NOLDS_NPY"
+# Create local staging directories
+rm -rf temp_assets
+mkdir -p temp_assets/spectrum/data
+mkdir -p temp_assets/nolds/datasets
 
+# Copy assets to staging area
+cp "$SPECTRUM_WAV" temp_assets/spectrum/data/
+cp "$NOLDS_NPY" temp_assets/nolds/datasets/
+
+echo "[DEBUG] Staged Spectrum Asset: temp_assets/spectrum/data/$(basename "$SPECTRUM_WAV")"
+echo "[DEBUG] Staged Nolds Asset: temp_assets/nolds/datasets/$(basename "$NOLDS_NPY")"
+
+# Step 4: Run PyInstaller
+echo ""
+echo "[Step 3] Compiling application into a .app bundle..."
 python3 -m PyInstaller --noconfirm --onedir --windowed \
     --osx-bundle-identifier "com.kodys.can" \
     --add-data "app_config:app_config" \
@@ -42,8 +55,8 @@ python3 -m PyInstaller --noconfirm --onedir --windowed \
     --add-data "app_assets:app_assets" \
     --add-data "config:config" \
     --add-data "db.sqlite3:." \
-    --add-data "$SPECTRUM_WAV:spectrum/data" \
-    --add-data "$NOLDS_NPY:nolds/datasets" \
+    --add-data "temp_assets/spectrum/data/DOLPHINS.wav:spectrum/data" \
+    --add-data "temp_assets/nolds/datasets/brown72.npy:nolds/datasets" \
     --name "KodysCAN" \
     --hidden-import "PyQt5.QtWebEngineWidgets" \
     --hidden-import "PyQt5.QtPrintSupport" \
@@ -85,8 +98,6 @@ python3 -m PyInstaller --noconfirm --onedir --windowed \
     --collect-all "biosppy" \
     --collect-all "xlsxwriter" \
     --collect-all "pdfkit" \
-    --collect-all "spectrum" \
-    --collect-all "nolds" \
     --collect-all "pkg_resources" \
     --collect-all "setuptools" \
     --copy-metadata "setuptools" \
