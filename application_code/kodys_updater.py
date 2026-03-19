@@ -35,8 +35,9 @@ class UpdateCheckerThread(QtCore.QThread):
 
                 if remote_version and remote_version != CURRENT_VERSION:
                     self.update_available_signal.emit(remote_version, download_url, release_notes)
-        except Exception as e:
-            print("Auto-update check failed silently in background:", e)
+        except Exception:
+            # Silent failure for background update check
+            pass
 
 class UpdateDownloader(QtCore.QThread):
     progress_signal = QtCore.pyqtSignal(int)

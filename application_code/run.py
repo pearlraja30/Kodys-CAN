@@ -2672,7 +2672,17 @@ if __name__ == "__main__":
             import threading
             def pipe_logger(pipe):
                 for line in iter(pipe.readline, ''):
-                    logger.info(f"[Server] {line.strip()}")
+                    clean_line = line.strip()
+                    # Filter out noisy Django development server warnings
+                    if any(msg in clean_line for msg in [
+                        "Starting development server",
+                        "Quit the server",
+                        "WARNING: This is a development server",
+                        "For more information on production servers"
+                    ]):
+                        continue
+                    if clean_line:
+                        logger.info(f"[Server] {clean_line}")
                 pipe.close()
             
             t = threading.Thread(target=pipe_logger, args=(proc.stdout,), daemon=True)
