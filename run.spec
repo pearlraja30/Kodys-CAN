@@ -10,6 +10,7 @@ a = Analysis(
         ('kodys', 'kodys'),
         ('templates', 'templates'),
         ('app_assets', 'app_assets'),
+        ('application_code/splash_screen.png', '.'),
     ],
     hiddenimports=[
         'django',

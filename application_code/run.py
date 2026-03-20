@@ -4,6 +4,15 @@ import logging
 import traceback
 import platform
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 # --- PyInstaller Windowed Mode Fix ---
 # On Windows, sys.stdout and sys.stderr are None if the app is bundled without a console.
 # We must redirect them to a NullWriter to prevent crashes during the boot sequence.
@@ -2777,31 +2786,55 @@ if __name__ == "__main__":
     # We no longer block at startup. 
     # License is now checked inside the medical service views in Django.
 
-    # Create and display the splash screen
-    app_dir_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
-    splash_pix = QtGui.QPixmap(app_dir_path + "\\splash_screen.png")
+    # --- UI Discovery & Bootstrap (v9.0) ---
+    logger.info("Initializing Clinical Bootstrap UI...")
+    
+    app = CefApplication(sys.argv)
+    
+    # Create and display a professional splash screen with fallback
+    splash_w, splash_h = 600, 400
+    splash_pix = QtGui.QPixmap(resource_path("splash_screen.png"))
+    
+    # If image is missing, create a branded fallback box
+    if splash_pix.isNull():
+        logger.warning("Splash image NOT FOUND in bundle. Creating branded fallback.")
+        splash_pix = QtGui.QPixmap(splash_w, splash_h)
+        splash_pix.fill(QtGui.QColor("#00bdb6"))
+        
     splash = QtGui.QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
     splash.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint | QtCore.Qt.FramelessWindowHint)
-    splash.setEnabled(False)
-    progressBar = QtGui.QProgressBar(splash)
-    progressBar.setMaximum(10)
-    progressBar.setGeometry(0, splash_pix.height() - 50, splash_pix.width(), 20)
-    progressBar.setStyleSheet(
-        " QProgressBar { border: 1px solid black; border-radius: 0px; text-align: center;font-size:16px;color:black; } QProgressBar::chunk {background-color: #3add36; width: 1px;}"
-    )
-    splash.show()
+    splash.setFixedSize(splash_w, splash_h)
     
-    # --- Real-Time Bootstrap Handshake ---
+    # Elegant Border for Fallback
+    splash_frame = QtGui.QFrame(splash)
+    splash_frame.setGeometry(0, 0, splash_w, splash_h)
+    splash_frame.setStyleSheet("border: 2px solid #009b95;")
+    
+    # Progress Bar (Modern Slim)
+    progressBar = QtGui.QProgressBar(splash)
+    progressBar.setMaximum(100)
+    progressBar.setGeometry(20, splash_h - 40, splash_w - 40, 6)
+    progressBar.setTextVisible(False)
+    progressBar.setStyleSheet(
+        " QProgressBar { border: none; background: rgba(255,255,255,0.3); border-radius: 3px; } "
+        " QProgressBar::chunk { background-color: #ffffff; border-radius: 3px; }"
+    )
+    
+    # Status Label (Always Visible)
     statusLabel = QtGui.QLabel(splash)
-    statusLabel.setGeometry(10, splash_pix.height() - 75, splash_pix.width() - 20, 25)
-    statusLabel.setStyleSheet("color: #FFFFFF; font-weight: bold; font-family: 'Roboto', 'Arial'; font-size: 13px;")
-    statusLabel.setAlignment(QtCore.Qt.AlignCenter)
-    statusLabel.show()
+    statusLabel.setGeometry(20, splash_h - 75, splash_w - 40, 30)
+    statusLabel.setStyleSheet("color: white; font-weight: bold; font-family: 'Segoe UI', 'Arial'; font-size: 14px;")
+    statusLabel.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+    statusLabel.setText("Initializing System Components...")
+    
+    splash.show()
+    splash.raise_()
+    app.processEvents()
 
-    def update_boot_progress(elapsed, status_text):
-        progress = min(10, int((elapsed / 65.0) * 10))
-        progressBar.setValue(progress)
+    def update_boot_progress(p, status_text):
+        progressBar.setValue(p)
         statusLabel.setText(status_text)
+        logger.info(f"Bootstrap: {status_text} ({p}%)")
         app.processEvents()
 
     logger.info("Synchronizing Clinical Environment...")
