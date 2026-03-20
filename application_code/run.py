@@ -7,13 +7,16 @@ import datetime
 import shutil
 
 def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+    """ Get absolute path to resource, supports PyInstaller 6.x (_internal) """
+    if hasattr(sys, '_MEIPASS'):
+        # Try primary bundle root
+        p1 = os.path.join(sys._MEIPASS, relative_path)
+        if os.path.exists(p1): return p1
+        # Try PyInstaller 6.x _internal folder
+        p2 = os.path.join(sys._MEIPASS, "_internal", relative_path)
+        if os.path.exists(p2): return p2
+        return p1 # Fallback
+    return os.path.join(os.path.abspath("."), relative_path)
 
 # --- PyInstaller Windowed Mode Fix ---
 # On Windows, sys.stdout and sys.stderr are None if the app is bundled without a console.
@@ -95,7 +98,7 @@ class StreamToLogger:
         self._broken = False
 
     def write(self, buf):
-        if self._broken: # If logging is dead, just use the terminal
+        if self._broken:
             self.terminal.write(buf)
             return
             
@@ -108,16 +111,24 @@ class StreamToLogger:
                 if msg:
                     try:
                         self.logger.log(self.level, msg)
-                        # Force every single line to disk immediately for real-time clinical diagnostics
+                        # Active Handler Disabling (Phase 2 Resilience)
+                        bad_handlers = []
                         for handler in self.logger.handlers:
                             if hasattr(handler, 'flush'):
                                 try:
                                     handler.flush()
+                                except OSError as e:
+                                    # If handler fails with OSError 22 (Invalid Argument), remove it permanently
+                                    bad_handlers.append(handler)
+                                    self._broken = True # Trigger circuit breaker
                                 except:
-                                    pass # Prevent recursion on flush error
+                                    pass
+                        
+                        for h in bad_handlers:
+                            self.logger.removeHandler(h)
+                            self.terminal.write(f"\n--- LOGGING DISABLING: Removed failing handler {h} ---\n")
+                            
                     except Exception:
-                        # CRITICAL: If the logging system itself is failing (e.g. OSError 22),
-                        # we MUST break the cycle. We fallback to the terminal and stop trying to log.
                         self._broken = True
                         self.terminal.write(f"\n--- LOGGING SYSTEM FAILURE: {buf} ---\n")
                         break
@@ -133,12 +144,18 @@ class StreamToLogger:
             return
         self._busy = True
         try:
+            bad_handlers = []
             for handler in self.logger.handlers:
                 if hasattr(handler, 'flush'):
                     try:
                         handler.flush()
+                    except OSError:
+                        bad_handlers.append(handler)
+                        self._broken = True
                     except:
                         pass
+            for h in bad_handlers:
+                self.logger.removeHandler(h)
         finally:
             self._busy = False
 

@@ -2,11 +2,15 @@
 from PyInstaller.utils.hooks import collect_all
 from PyInstaller.utils.hooks import copy_metadata
 
-datas = [('app_config', 'app_config'), ('kodys', 'kodys'), ('app_assets', 'app_assets'), ('config', 'config'), ('db.sqlite3', '.'), ('application_code/splash_screen.png', '.'), ('.venv_mac/lib/python3.13/site-packages/spectrum/data/DOLPHINS.wav', 'spectrum/data'), ('.venv_mac/lib/python3.13/site-packages/nolds/datasets/brown72.npy', 'nolds/datasets')]
+datas = [('app_config', 'app_config'), ('kodys', 'kodys'), ('app_assets', 'app_assets'), ('config', 'config'), ('db.sqlite3', '.'), ('application_code/splash_screen.png', '.')]
 binaries = []
-hiddenimports = ['PyQt5.QtWebEngineWidgets', 'PyQt5.QtPrintSupport', 'cv2', 'setuptools', 'distutils', 'fitz', 'pymupdf', 'cryptography.fernet', 'cryptography.hazmat.backends', 'pkg_resources', 'heartpy', 'pyhrv', 'pyhrv.time_domain', 'pyhrv.frequency_domain', 'pyhrv.nonlinear', 'peakutils', 'scipy.signal', 'scipy.optimize', 'scipy.interpolate', 'scipy.stats', 'matplotlib', 'matplotlib.pyplot', 'pandas', 'serial', 'xlsxwriter', 'pdfkit', 'requests', 'psutil', 'biosppy', 'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles']
+hiddenimports = ['spectrum', 'nolds', 'PyQt5.QtWebEngineWidgets', 'PyQt5.QtPrintSupport', 'cv2', 'setuptools', 'distutils', 'fitz', 'pymupdf', 'cryptography.fernet', 'cryptography.hazmat.backends', 'pkg_resources', 'heartpy', 'pyhrv', 'pyhrv.time_domain', 'pyhrv.frequency_domain', 'pyhrv.nonlinear', 'peakutils', 'scipy.signal', 'scipy.optimize', 'scipy.interpolate', 'scipy.stats', 'matplotlib', 'matplotlib.pyplot', 'pandas', 'serial', 'xlsxwriter', 'pdfkit', 'requests', 'psutil', 'biosppy', 'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles']
 datas += copy_metadata('setuptools')
 datas += copy_metadata('heartpy')
+tmp_ret = collect_all('spectrum')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('nolds')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('heartpy')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('pyhrv')

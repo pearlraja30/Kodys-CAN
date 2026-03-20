@@ -22,6 +22,8 @@ a = Analysis(
         'django.contrib.staticfiles',
         'heartpy',
         'pyhrv',
+        'spectrum',
+        'nolds',
         'scipy.signal',
         'numpy',
         'app_config.wsgi',
