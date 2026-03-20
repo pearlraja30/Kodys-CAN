@@ -3,6 +3,8 @@ import sys
 import logging
 import traceback
 import platform
+import datetime
+import shutil
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -49,13 +51,14 @@ LOG_FILE = os.path.join(DESKTOP_PATH, "KODYS_EMERGENCY_DEBUG.log")
 if not os.path.exists(DESKTOP_PATH):
     LOG_FILE = os.path.join(os.path.expanduser("~"), "KODYS_FLIGHT_RECORDER.log")
 
-# 2. Setup the Master Logger (Safe-Fail Mode)
+# 2. Setup the Master Logger (Safe-Fail Mode with Append)
 try:
     if not os.path.exists(os.path.dirname(LOG_FILE)):
         os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
     
+    # Use append mode ('a') to prevent sub-processes from wiping main logs
     _handlers = [
-        logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8'),
+        logging.FileHandler(LOG_FILE, mode='a', encoding='utf-8'),
         logging.StreamHandler(sys.stdout) if sys.stdout else logging.NullHandler()
     ]
 except Exception as e:
@@ -63,9 +66,13 @@ except Exception as e:
     print(f"--- CLINICAL LOGGING WARNING: Falling back to stream. Error: {e} ---")
     _handlers = [logging.StreamHandler(sys.stdout) if sys.stdout else logging.NullHandler()]
 
+# Detect process role for cleaner logging
+_is_server = len(sys.argv) > 1 and "runserver" in sys.argv
+_role = "KodysServer" if _is_server else "KodysMain"
+
 logging.basicConfig(
-    level=logging.INFO, # Reduced from DEBUG for production stability
-    format='%(asctime)s [%(levelname)s] [%(threadName)s] %(message)s',
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] [PID:%(process)d] [' + _role + '] %(message)s',
     handlers=_handlers
 )
 
@@ -73,7 +80,9 @@ logging.basicConfig(
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 logging.getLogger("PIL").setLevel(logging.WARNING)
 
-logger = logging.getLogger("KodysFlightRecorder")
+logger = logging.getLogger(_role)
+if not _is_server:
+    logger.info("\n" + "="*50 + f"\n--- NEW CLINICAL SESSION: {datetime.datetime.now()} ---\n" + "="*50)
 
 # 3. Hijack stdout/stderr to ensure tracebacks are saved to the log file
 class StreamToLogger:
@@ -2636,7 +2645,7 @@ if __name__ == "__main__":
     CLI_PROJECT_NAME = "app_config"
     
     if len(sys.argv) > 1 and "runserver" in sys.argv:
-        logger.info("Background Mode: Initializing Clinical Server...")
+        logger.info("Background Mode: Initializing Clinical Server Process...")
         try:
             # Force absolute path discovery in subprocess
             if ROOT_DIR not in sys.path:
@@ -2644,25 +2653,35 @@ if __name__ == "__main__":
             
             # Use direct assignment to override any existing 'app' settings
             os.environ['DJANGO_SETTINGS_MODULE'] = 'app_config.settings'
+            
+            logger.info("Clinical Engine: Loading Django Framework...")
             import django
+            
+            logger.info("Clinical Engine: Bootstrapping Django Registry...")
             django.setup()
+            
+            logger.info("Clinical Engine: Initializing Management Core...")
             from django.core.management import execute_from_command_line, call_command
             
             # --- Automated Database Initialization ---
             try:
-                logger.info("Syncing Clinical Database Schema...")
+                logger.info("Clinical Engine: Syncing Database Schema (Step 1/3)...")
                 call_command('migrate', interactive=False, verbosity=1)
                 
+                logger.info("Clinical Engine: Auditing Data Integrity (Step 2/3)...")
                 # Conditional Seeding: Load fixtures if the medical apps metadata is missing
                 from kodys.models import MA_MEDICALAPPS
+                
                 if not MA_MEDICALAPPS.objects.exists():
-                    logger.info("New Installation Detected: Seeding Clinical Metadata...")
+                    logger.info("Clinical Engine: New Installation - Seeding Metadata (Step 3/3)...")
                     fixture_dir = os.path.join(ROOT_DIR, "kodys", "fixtures", "json")
                     fixtures = sorted([f for f in os.listdir(fixture_dir) if f.endswith('.json')])
                     for fixture in fixtures:
                         fixture_path = os.path.join(fixture_dir, fixture)
-                        logger.info(f"Loading Clinical Fixture: {fixture}")
+                        logger.info(f"Clinical Engine: Loading Master Fixture: {fixture}")
                         call_command('loaddata', fixture_path, verbosity=0)
+                else:
+                    logger.info("Clinical Engine: Database Integrity Confirmed.")
                     
                     # Ensure a default superuser exists for initial login
                     from django.contrib.auth.models import User
