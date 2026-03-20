@@ -97,26 +97,32 @@ LOG_FILE = os.path.join(DESKTOP_PATH, "KODYS_EMERGENCY_DEBUG.log")
 if not os.path.exists(DESKTOP_PATH):
     LOG_FILE = os.path.join(os.path.expanduser("~"), "KODYS_FLIGHT_RECORDER.log")
 
-# 2. Setup the Master Logger (Safe-Fail Mode with Append)
+# 2. Setup the Master Logger (Safe-Fail Mode with Append) - Phase 7 (Temp-First)
+_handlers = []
 try:
-    if not os.path.exists(os.path.dirname(LOG_FILE)):
-        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
-    
-    # Use append mode ('a') to prevent sub-processes from wiping main logs
-    _handlers = [
-        SafeFileHandler(LOG_FILE, mode='a', encoding='utf-8'),
-        logging.StreamHandler(sys.stdout) if sys.stdout else logging.NullHandler()
-    ]
-except Exception as e:
-    # If Desktop/Local paths fail (Errno 22), fallback to TEMP folder for absolute survival
+    # TRY TEMP FIRST - Guaranteed write access on Windows
     TEMP_LOG = os.path.join(tempfile.gettempdir(), "KODYS_TEMP_EMERGENCY.log")
-    print(f"--- CLINICAL LOGGING WARNING: Falling back to {TEMP_LOG}. Error: {e} ---")
     try:
-        _handlers = [SafeFileHandler(TEMP_LOG, mode='a', encoding='utf-8')]
-        # Provide user feedback via native popup if possible
-        show_error(f"Normal logging failed. Diagnostic log created at:\n{TEMP_LOG}\nCause: {e}", "Logging Warning")
-    except:
-        _handlers = [logging.StreamHandler(sys.stdout) if sys.stdout else logging.NullHandler()]
+        h_temp = SafeFileHandler(TEMP_LOG, mode='a', encoding='utf-8')
+        if not h_temp.broken:
+            _handlers.append(h_temp)
+            show_error(f"Logging Milestone 1.5: Emergency Temp Log Active.\nPath: {TEMP_LOG}", "Boot Progress")
+    except: pass
+    
+    # TRY DESKTOP SECOND - Better visibility for user
+    if os.path.exists(DESKTOP_PATH):
+        try:
+            h_desk = SafeFileHandler(LOG_FILE, mode='a', encoding='utf-8')
+            if not h_desk.broken:
+                _handlers.append(h_desk)
+        except: pass
+    
+    # ALWAYS ADD STREAM - Raw terminal/NullWriter
+    _handlers.append(logging.StreamHandler(sys.stdout) if sys.stdout else logging.NullHandler())
+
+except Exception as e:
+    show_error(f"Fatal logging setup failure: {e}", "Critical Error")
+    _handlers = [logging.NullHandler()]
 
 # Milestone 2: Logging Initialized
 try:
@@ -158,14 +164,21 @@ class StreamToLogger:
 # 3. Safe Logging Framework (Phase 3 Resilience)
 class SafeFileHandler(logging.FileHandler):
     def __init__(self, *args, **kwargs):
+        self.broken = False
+        self.baseFilename = args[0] if args else "unknown.log"
         try:
-            self.broken = False
             super().__init__(*args, **kwargs)
         except Exception as e:
             self.broken = True
+            # Satisfy the logging module's requirement for a stream attribute
             try:
-                sys.stderr.write(f"\n--- SafeFileHandler INIT FAILED: {e} ---\n")
-            except: pass
+                self.stream = open(os.devnull, 'w')
+            except:
+                class DevNull:
+                    def write(self, x): pass
+                    def flush(self): pass
+                self.stream = DevNull()
+            show_error(f"SafeFileHandler failed to init: {e}\nPath: {self.baseFilename}", "Critical Handler Error")
 
     def emit(self, record):
         if self.broken: return
