@@ -2577,7 +2577,35 @@ if __name__ == "__main__":
             os.environ['DJANGO_SETTINGS_MODULE'] = 'app_config.settings'
             import django
             django.setup()
-            from django.core.management import execute_from_command_line
+            from django.core.management import execute_from_command_line, call_command
+            
+            # --- Automated Database Initialization ---
+            try:
+                logger.info("Syncing Clinical Database Schema...")
+                call_command('migrate', interactive=False, verbosity=1)
+                
+                # Conditional Seeding: Load fixtures if the medical apps metadata is missing
+                from kodys.models import MA_MEDICALAPPS
+                if not MA_MEDICALAPPS.objects.exists():
+                    logger.info("New Installation Detected: Seeding Clinical Metadata...")
+                    fixture_dir = os.path.join(ROOT_DIR, "kodys", "fixtures", "json")
+                    fixtures = sorted([f for f in os.listdir(fixture_dir) if f.endswith('.json')])
+                    for fixture in fixtures:
+                        fixture_path = os.path.join(fixture_dir, fixture)
+                        logger.info(f"Loading Clinical Fixture: {fixture}")
+                        call_command('loaddata', fixture_path, verbosity=0)
+                    
+                    # Ensure a default superuser exists for initial login
+                    from django.contrib.auth.models import User
+                    if not User.objects.filter(is_superuser=True).exists():
+                         User.objects.create_superuser(
+                             username='admin', 
+                             email=settings.DEFAULT_USER_EMAIL, 
+                             password=settings.DEFAULT_USER_PASSWORD
+                         )
+                         logger.info("Default Clinical Admin Account Created.")
+            except Exception as db_err:
+                logger.error(f"Database Initialization Error: {db_err}")
             
             # The executable used manage_path as the second arg, but we want to 
             # pass the args starting from 'runserver'.

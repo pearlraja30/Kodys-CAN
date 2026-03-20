@@ -1,0 +1,19 @@
+{
+    "application": {
+        "project_dir_name": "app_config",
+        "assets_dir_name": "app_assets",
+        "assets_media_dir_name": "media"
+    },
+    "window": {
+        "title": "Kodys Clinical Diagnostic Suite",
+        "width": "1280",
+        "height": "800",
+        "min_width": "1024",
+        "min_height": "768",
+        "max_width": "0",
+        "max_height": "0",
+        "fullscreen_allowed": "false",
+        "dev_tools_menu_enabled": "true",
+        "icon": "kodys_icon.ico"
+    }
+}
