@@ -402,6 +402,7 @@ class LoadHandler:
         self.initial_app_loading = True
 
     def OnLoadStart(self, browser, **_):
+        logger.info(f"CEF: Loading {browser.GetUrl()}")
         if self.initial_app_loading:
             self.initial_app_loading = False
 
@@ -410,10 +411,10 @@ class LoadHandler:
             pass
 
     def OnLoadEnd(self, browser, **_):
-        pass
+        logger.info(f"CEF: Load Finished {browser.GetUrl()}")
 
-    def OnLoadError(self, browser, **_):
-        pass
+    def OnLoadError(self, browser, error_code, error_text_out, failed_url, **_):
+        logger.error(f"CEF: Load Error {error_code} for {failed_url}: {error_text_out.get()}")
 
 
 def ToByteArray(hex_string):
@@ -1536,8 +1537,10 @@ def convertIt():
 class External(object):
     def __init__(self, browser):
         self.browser = browser
+        logger.info("JS Bindings: External interface initialized.")
 
     def connection(self, js_callback):
+        logger.info("JS Bindings: connection() called")
         def connect(device_type, pass_code, connection_type):
             global browser_func
             global thread_connection
@@ -2801,7 +2804,7 @@ if __name__ == "__main__":
         
         update_boot_progress(elapsed, f"Connecting to Clinical Database... ({int(elapsed)}s)")
         
-        if elapsed > 70: # Safety buffer
+        if elapsed > 120: # Increased for first-run init
             logger.error("FATAL: Clinical Server timed out.")
             statusLabel.setText("Database Connection Failed.")
             app.processEvents()

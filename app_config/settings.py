@@ -238,7 +238,7 @@ LOGGING = {
             "propagate": True,
         },
         "app": {
-            "handlers": ["appfile"],
+            "handlers": ["appfile", "console"],
             "level": "INFO",
             "propagate": False,
         },
