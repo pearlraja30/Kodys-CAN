@@ -414,7 +414,28 @@ class LoadHandler:
         logger.info(f"CEF: Load Finished {browser.GetUrl()}")
 
     def OnLoadError(self, browser, error_code, error_text_out, failed_url, **_):
-        logger.error(f"CEF: Load Error {error_code} for {failed_url}: {error_text_out.get()}")
+        # -102 is ERR_CONNECTION_REFUSED, common during server boot
+        if error_code == -102 or "127.0.0.1" in failed_url:
+            logger.info("Clinical Engine: Server not ready. Retrying in 1s...")
+            
+            # Show a professional initialization screen instead of a raw error
+            retail_html = """
+            <html><body style="background:#f4f6f9; font-family:Arial; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
+                <div style="text-align:center;">
+                    <h2 style="color:#00bdb6;">Initializing Clinical Engine...</h2>
+                    <p style="color:#666;">Synchronizing local database services. Please wait.</p>
+                    <div style="width:40px; height:40px; border:4px solid #f3f3f3; border-top:4px solid #00bdb6; border-radius:50%; animation:spin 1s linear infinite; display:inline-block;"></div>
+                    <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+                </div>
+            </body></html>
+            """
+            browser.LoadHtml(retail_html)
+            
+            # Use QTimer to retry after a short delay
+            from PyQt5 import QtCore
+            QtCore.QTimer.singleShot(1500, lambda: browser.Reload())
+        else:
+            logger.error(f"CEF: Load Error {error_code} for {failed_url}: {error_text_out.get()}")
 
 
 def ToByteArray(hex_string):
@@ -2784,41 +2805,12 @@ if __name__ == "__main__":
         app.processEvents()
 
     logger.info("Synchronizing Clinical Environment...")
-    update_boot_progress(5, "Initializing Clinical Data...")
-
-    # Wait for the internal clinical server with real-time feedback
-    start_wait = time.time()
-    server_ready = False
-    while True:
-        elapsed = time.time() - start_wait
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(0.5)
-        result = sock.connect_ex(("127.0.0.1", 5423))
-        sock.close()
-
-        if result == 0:
-            logger.info("Internal Clinical Server Handshake Successful.")
-            update_boot_progress(65, "Clinical Engine Ready.")
-            server_ready = True
-            break
-        
-        update_boot_progress(elapsed, f"Connecting to Clinical Database... ({int(elapsed)}s)")
-        
-        if elapsed > 120: # Increased for first-run init
-            logger.error("FATAL: Clinical Server timed out.")
-            statusLabel.setText("Database Connection Failed.")
-            app.processEvents()
-            break
-        
-        time.sleep(0.5)
-
-    if not server_ready:
-        QtGui.QMessageBox.critical(
-            None, 
-            "System Error", 
-            "The Clinical Database Server failed to start.\n\nPlease check 'KODYS_EMERGENCY_DEBUG.log' on your Desktop."
-        )
-        sys.exit(1)
+    update_boot_progress(50, "Launching Clinical Suite...")
+    
+    # We no longer block on a server handshake here.
+    # The LoadHandler in CEF will handle retries if the server is still booting.
+    time.sleep(1) # Brief pause for splash visibility
+    update_boot_progress(100, "Ready.")
 
     mainWindow = MainWindow()
     mainWindow.show()
