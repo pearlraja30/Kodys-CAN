@@ -49,15 +49,30 @@ LOG_FILE = os.path.join(DESKTOP_PATH, "KODYS_EMERGENCY_DEBUG.log")
 if not os.path.exists(DESKTOP_PATH):
     LOG_FILE = os.path.join(os.path.expanduser("~"), "KODYS_FLIGHT_RECORDER.log")
 
-# 2. Setup the Master Logger
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] [%(threadName)s] %(message)s',
-    handlers=[
+# 2. Setup the Master Logger (Safe-Fail Mode)
+try:
+    if not os.path.exists(os.path.dirname(LOG_FILE)):
+        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+    
+    _handlers = [
         logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8'),
         logging.StreamHandler(sys.stdout) if sys.stdout else logging.NullHandler()
     ]
+except Exception as e:
+    # If Desktop/Local paths fail (Errno 22), fallback to Stream only
+    print(f"--- CLINICAL LOGGING WARNING: Falling back to stream. Error: {e} ---")
+    _handlers = [logging.StreamHandler(sys.stdout) if sys.stdout else logging.NullHandler()]
+
+logging.basicConfig(
+    level=logging.INFO, # Reduced from DEBUG for production stability
+    format='%(asctime)s [%(levelname)s] [%(threadName)s] %(message)s',
+    handlers=_handlers
 )
+
+# Silence noisy clinical dependencies
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
+logging.getLogger("PIL").setLevel(logging.WARNING)
+
 logger = logging.getLogger("KodysFlightRecorder")
 
 # 3. Hijack stdout/stderr to ensure tracebacks are saved to the log file
@@ -66,19 +81,40 @@ class StreamToLogger:
         self.logger = logger
         self.level = level
         self.linebuf = ''
+        self._busy = False
+
     def write(self, buf):
-        for line in buf.rstrip().splitlines():
-            msg = line.rstrip()
-            if msg:
-                self.logger.log(self.level, msg)
-                # Force every single line to disk immediately for real-time clinical diagnostics
-                for handler in self.logger.handlers:
-                    if hasattr(handler, 'flush'):
-                        handler.flush()
+        if self._busy:
+            return
+        self._busy = True
+        try:
+            for line in buf.rstrip().splitlines():
+                msg = line.rstrip()
+                if msg:
+                    self.logger.log(self.level, msg)
+                    # Force every single line to disk immediately for real-time clinical diagnostics
+                    for handler in self.logger.handlers:
+                        if hasattr(handler, 'flush'):
+                            try:
+                                handler.flush()
+                            except:
+                                pass # Prevent recursion on flush error
+        finally:
+            self._busy = False
+
     def flush(self):
-        for handler in self.logger.handlers:
-            if hasattr(handler, 'flush'):
-                handler.flush()
+        if self._busy:
+            return
+        self._busy = True
+        try:
+            for handler in self.logger.handlers:
+                if hasattr(handler, 'flush'):
+                    try:
+                        handler.flush()
+                    except:
+                        pass
+        finally:
+            self._busy = False
 
 sys.stdout = StreamToLogger(logger, logging.INFO)
 sys.stderr = StreamToLogger(logger, logging.ERROR)
