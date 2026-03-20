@@ -2,7 +2,7 @@
 from PyInstaller.utils.hooks import collect_all
 from PyInstaller.utils.hooks import copy_metadata
 
-datas = [('app_config', 'app_config'), ('kodys', 'kodys'), ('app_assets', 'app_assets'), ('config', 'config'), ('db.sqlite3', '.'), ('application_code/splash_screen.png', '.')]
+datas = [('app_config', 'app_config'), ('kodys', 'kodys'), ('kodys/fixtures/json', 'kodys/fixtures/json'), ('app_assets', 'app_assets'), ('config', 'config'), ('db.sqlite3', '.'), ('application_code/splash_screen.png', '.')]
 binaries = []
 hiddenimports = ['spectrum', 'nolds', 'PyQt5.QtWebEngineWidgets', 'PyQt5.QtPrintSupport', 'cv2', 'setuptools', 'distutils', 'fitz', 'pymupdf', 'cryptography.fernet', 'cryptography.hazmat.backends', 'pkg_resources', 'heartpy', 'pyhrv', 'pyhrv.time_domain', 'pyhrv.frequency_domain', 'pyhrv.nonlinear', 'peakutils', 'scipy.signal', 'scipy.optimize', 'scipy.interpolate', 'scipy.stats', 'matplotlib', 'matplotlib.pyplot', 'pandas', 'serial', 'xlsxwriter', 'pdfkit', 'requests', 'psutil', 'biosppy', 'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles']
 datas += copy_metadata('setuptools')

@@ -15,6 +15,20 @@ def resource_path(relative_path):
         # Try PyInstaller 6.x _internal folder
         p2 = os.path.join(sys._MEIPASS, "_internal", relative_path)
         if os.path.exists(p2): return p2
+        
+        # Diagnostic Fallback (Phase 3)
+        diagnostic_log = os.path.join(tempfile.gettempdir(), f"kodys_path_fail_{pid}.txt")
+        with open(diagnostic_log, "a") as f:
+            f.write(f"\n--- FAILED TO LOCATE: {relative_path} ---\n")
+            f.write(f"MEIPASS: {sys._MEIPASS}\n")
+            f.write(f"CWD: {os.getcwd()}\n")
+            try:
+                f.write(f"ROOT DATA: {os.listdir(sys._MEIPASS)}\n")
+                internal_path = os.path.join(sys._MEIPASS, "_internal")
+                if os.path.exists(internal_path):
+                    f.write(f"INTERNAL DATA: {os.listdir(internal_path)}\n")
+            except:
+                f.write("Failed to crawl directories.\n")
         return p1 # Fallback
     return os.path.join(os.path.abspath("."), relative_path)
 
@@ -61,7 +75,7 @@ try:
     
     # Use append mode ('a') to prevent sub-processes from wiping main logs
     _handlers = [
-        logging.FileHandler(LOG_FILE, mode='a', encoding='utf-8'),
+        SafeFileHandler(LOG_FILE, mode='a', encoding='utf-8'),
         logging.StreamHandler(sys.stdout) if sys.stdout else logging.NullHandler()
     ]
 except Exception as e:
@@ -97,6 +111,40 @@ class StreamToLogger:
         self._busy = False
         self._broken = False
 
+# 3. Safe Logging Framework (Phase 3 Resilience)
+class SafeFileHandler(logging.FileHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.broken = False
+
+    def emit(self, record):
+        if self.broken: return
+        try:
+            super().emit(record)
+        except OSError as e:
+            if getattr(e, 'errno', None) == 22:
+                self.broken = True
+                sys.__stderr__.write(f"\n--- SafeFileHandler DISABLED: OSError 22 on {self.baseFilename} ---\n")
+        except:
+            pass
+
+    def flush(self):
+        if self.broken: return
+        try:
+            super().flush()
+        except OSError:
+            self.broken = True
+        except:
+            pass
+
+class StreamToLogger:
+    def __init__(self, logger, level, terminal):
+        self.logger = logger
+        self.level = level
+        self.terminal = terminal
+        self._busy = False
+        self._broken = False
+
     def write(self, buf):
         if self._broken:
             self.terminal.write(buf)
@@ -111,23 +159,9 @@ class StreamToLogger:
                 if msg:
                     try:
                         self.logger.log(self.level, msg)
-                        # Active Handler Disabling (Phase 2 Resilience)
-                        bad_handlers = []
+                        # Force flush on all handlers
                         for handler in self.logger.handlers:
-                            if hasattr(handler, 'flush'):
-                                try:
-                                    handler.flush()
-                                except OSError as e:
-                                    # If handler fails with OSError 22 (Invalid Argument), remove it permanently
-                                    bad_handlers.append(handler)
-                                    self._broken = True # Trigger circuit breaker
-                                except:
-                                    pass
-                        
-                        for h in bad_handlers:
-                            self.logger.removeHandler(h)
-                            self.terminal.write(f"\n--- LOGGING DISABLING: Removed failing handler {h} ---\n")
-                            
+                            handler.flush()
                     except Exception:
                         self._broken = True
                         self.terminal.write(f"\n--- LOGGING SYSTEM FAILURE: {buf} ---\n")
@@ -144,18 +178,8 @@ class StreamToLogger:
             return
         self._busy = True
         try:
-            bad_handlers = []
             for handler in self.logger.handlers:
-                if hasattr(handler, 'flush'):
-                    try:
-                        handler.flush()
-                    except OSError:
-                        bad_handlers.append(handler)
-                        self._broken = True
-                    except:
-                        pass
-            for h in bad_handlers:
-                self.logger.removeHandler(h)
+                handler.flush()
         finally:
             self._busy = False
 
@@ -179,10 +203,16 @@ except ImportError:
     pkg_resources_mock.Requirement = lambda x: x
     sys.modules["pkg_resources"] = pkg_resources_mock
     logger.warning("Clinical Engine: pkg_resources shimmed (CRITICAL: Module Not Bundled).")
-logger.info(f"System: {platform.system()} {platform.release()}")
-logger.info(f"Python: {sys.version}")
-logger.info(f"Executable: {sys.executable}")
-logger.info(f"Data Directory: {KODYS_DATA_DIR}")
+    # Configuration and Meta-Data Dump for clinical diagnostics
+    logger.info(f"System: {platform.system()} {platform.release()}")
+    logger.info(f"Python: {sys.version}")
+    logger.info(f"Executable: {sys.executable}")
+    logger.info(f"MEIPASS: {getattr(sys, '_MEIPASS', 'N/A')}")
+    logger.info(f"CWD: {os.getcwd()}")
+    logger.info(f"Path: {sys.path[:5]}...") # Keep it concise
+    logger.info(f"Data Directory: {KODYS_DATA_DIR}")
+    logger.info("-" * 45)
+
 logger.info("---------------------------------------------")
 
 # --- Multi-Platform Root Discovery ---

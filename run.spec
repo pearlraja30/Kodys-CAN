@@ -8,6 +8,7 @@ a = Analysis(
     datas=[
         ('app_config', 'app_config'),
         ('kodys', 'kodys'),
+        ('kodys/fixtures/json', 'kodys/fixtures/json'),
         ('templates', 'templates'),
         ('app_assets', 'app_assets'),
         ('application_code/splash_screen.png', '.'),
