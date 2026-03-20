@@ -86,13 +86,19 @@ if not _is_server:
 
 # 3. Hijack stdout/stderr to ensure tracebacks are saved to the log file
 class StreamToLogger:
-    def __init__(self, logger, level):
+    def __init__(self, logger, level, terminal):
         self.logger = logger
         self.level = level
+        self.terminal = terminal # Original sys.stderr/stdout
         self.linebuf = ''
         self._busy = False
+        self._broken = False
 
     def write(self, buf):
+        if self._broken: # If logging is dead, just use the terminal
+            self.terminal.write(buf)
+            return
+            
         if self._busy:
             return
         self._busy = True
@@ -100,18 +106,29 @@ class StreamToLogger:
             for line in buf.rstrip().splitlines():
                 msg = line.rstrip()
                 if msg:
-                    self.logger.log(self.level, msg)
-                    # Force every single line to disk immediately for real-time clinical diagnostics
-                    for handler in self.logger.handlers:
-                        if hasattr(handler, 'flush'):
-                            try:
-                                handler.flush()
-                            except:
-                                pass # Prevent recursion on flush error
+                    try:
+                        self.logger.log(self.level, msg)
+                        # Force every single line to disk immediately for real-time clinical diagnostics
+                        for handler in self.logger.handlers:
+                            if hasattr(handler, 'flush'):
+                                try:
+                                    handler.flush()
+                                except:
+                                    pass # Prevent recursion on flush error
+                    except Exception:
+                        # CRITICAL: If the logging system itself is failing (e.g. OSError 22),
+                        # we MUST break the cycle. We fallback to the terminal and stop trying to log.
+                        self._broken = True
+                        self.terminal.write(f"\n--- LOGGING SYSTEM FAILURE: {buf} ---\n")
+                        break
         finally:
             self._busy = False
 
     def flush(self):
+        if self._broken:
+            self.terminal.flush()
+            return
+            
         if self._busy:
             return
         self._busy = True
@@ -125,8 +142,8 @@ class StreamToLogger:
         finally:
             self._busy = False
 
-sys.stdout = StreamToLogger(logger, logging.INFO)
-sys.stderr = StreamToLogger(logger, logging.ERROR)
+sys.stdout = StreamToLogger(logger, logging.INFO, sys.__stdout__)
+sys.stderr = StreamToLogger(logger, logging.ERROR, sys.__stderr__)
 
 logger.info("=== KODYS CLINICAL FLIGHT RECORDER ACTIVE ===")
 
@@ -2674,12 +2691,16 @@ if __name__ == "__main__":
                 
                 if not MA_MEDICALAPPS.objects.exists():
                     logger.info("Clinical Engine: New Installation - Seeding Metadata (Step 3/3)...")
-                    fixture_dir = os.path.join(ROOT_DIR, "kodys", "fixtures", "json")
-                    fixtures = sorted([f for f in os.listdir(fixture_dir) if f.endswith('.json')])
-                    for fixture in fixtures:
-                        fixture_path = os.path.join(fixture_dir, fixture)
-                        logger.info(f"Clinical Engine: Loading Master Fixture: {fixture}")
-                        call_command('loaddata', fixture_path, verbosity=0)
+                    fixture_dir = resource_path(os.path.join("kodys", "fixtures", "json"))
+                    
+                    if not os.path.exists(fixture_dir):
+                        logger.error(f"Seeding FAILURE: Fixture directory not found at {fixture_dir}")
+                    else:
+                        fixtures = sorted([f for f in os.listdir(fixture_dir) if f.endswith('.json')])
+                        for fixture in fixtures:
+                            fixture_path = os.path.join(fixture_dir, fixture)
+                            logger.info(f"Clinical Engine: Loading Master Fixture: {fixture}")
+                            call_command('loaddata', fixture_path, verbosity=0)
                 else:
                     logger.info("Clinical Engine: Database Integrity Confirmed.")
                     
