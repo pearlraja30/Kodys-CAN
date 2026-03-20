@@ -14,6 +14,8 @@ a = Analysis(
         ('application_code/splash_screen.png', '.'),
     ],
     hiddenimports=[
+        'ctypes',
+        'PyQt5.QtWebEngineWidgets',
         'django',
         'django.contrib.admin',
         'django.contrib.auth',

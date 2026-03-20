@@ -6,8 +6,19 @@ import platform
 import datetime
 import shutil
 import tempfile
+import ctypes
 
 pid = os.getpid()
+
+def show_error(message, title="Kodys Clinical Engine Error"):
+    """ Native Windows Error Popup for zero-visibility situations """
+    try:
+        if sys.platform == 'win32':
+            ctypes.windll.user32.MessageBoxW(0, str(message), str(title), 0x10)
+        else:
+            print(f"CRITICAL ERROR [{title}]: {message}")
+    except:
+        pass
 
 def resource_path(relative_path):
     """ Get absolute path to resource, supports PyInstaller 6.x (_internal) """
@@ -54,6 +65,10 @@ if not _is_functional(sys.stdout):
 if not _is_functional(sys.stderr):
     sys.stderr = sys.stdout
 
+# Sanitize original __stderr__ for SafeFileHandler fallback
+if not _is_functional(sys.__stderr__):
+    sys.__stderr__ = sys.stderr
+
 # Early Heartbeat for Terminal Debug (Now Bulletproof)
 try:
     print("--- KODYS SYSTEM BOOT INITIATED ---")
@@ -92,9 +107,15 @@ try:
         logging.StreamHandler(sys.stdout) if sys.stdout else logging.NullHandler()
     ]
 except Exception as e:
-    # If Desktop/Local paths fail (Errno 22), fallback to Stream only
-    print(f"--- CLINICAL LOGGING WARNING: Falling back to stream. Error: {e} ---")
-    _handlers = [logging.StreamHandler(sys.stdout) if sys.stdout else logging.NullHandler()]
+    # If Desktop/Local paths fail (Errno 22), fallback to TEMP folder for absolute survival
+    TEMP_LOG = os.path.join(tempfile.gettempdir(), "KODYS_TEMP_EMERGENCY.log")
+    print(f"--- CLINICAL LOGGING WARNING: Falling back to {TEMP_LOG}. Error: {e} ---")
+    try:
+        _handlers = [SafeFileHandler(TEMP_LOG, mode='a', encoding='utf-8')]
+        # Provide user feedback via native popup if possible
+        show_error(f"Normal logging failed. Diagnostic log created at:\n{TEMP_LOG}\nCause: {e}", "Logging Warning")
+    except:
+        _handlers = [logging.StreamHandler(sys.stdout) if sys.stdout else logging.NullHandler()]
 
 # Detect process role for cleaner logging
 _is_server = len(sys.argv) > 1 and "runserver" in sys.argv
