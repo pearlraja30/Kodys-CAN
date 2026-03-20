@@ -5,6 +5,9 @@ import traceback
 import platform
 import datetime
 import shutil
+import tempfile
+
+pid = os.getpid()
 
 def resource_path(relative_path):
     """ Get absolute path to resource, supports PyInstaller 6.x (_internal) """
@@ -32,21 +35,31 @@ def resource_path(relative_path):
         return p1 # Fallback
     return os.path.join(os.path.abspath("."), relative_path)
 
-# --- PyInstaller Windowed Mode Fix ---
-# On Windows, sys.stdout and sys.stderr are None if the app is bundled without a console.
-# We must redirect them to a NullWriter to prevent crashes during the boot sequence.
-if sys.stdout is None:
-    class NullWriter(object):
-        def write(self, arg): pass
-        def flush(self): pass
+# --- PyInstaller Windowed Mode Fix (Hardened V4.0) ---
+class NullWriter(object):
+    def write(self, arg): pass
+    def flush(self): pass
+
+def _is_functional(stream):
+    if stream is None: return False
+    try:
+        stream.write("")
+        if hasattr(stream, "flush"): stream.flush()
+        return True
+    except:
+        return False
+
+if not _is_functional(sys.stdout):
     sys.stdout = NullWriter()
-if sys.stderr is None:
+if not _is_functional(sys.stderr):
     sys.stderr = sys.stdout
 
-# Early Heartbeat for Terminal Debug (Now safe from NoneType crashes)
-print("--- KODYS SYSTEM BOOT INITIATED ---")
-if hasattr(sys.stdout, 'flush'):
+# Early Heartbeat for Terminal Debug (Now Bulletproof)
+try:
+    print("--- KODYS SYSTEM BOOT INITIATED ---")
     sys.stdout.flush()
+except:
+    pass
 
 
 # --- Clinical Flight Recorder (V6.0) ---
