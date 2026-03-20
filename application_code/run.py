@@ -73,6 +73,7 @@ if not _is_functional(sys.__stderr__):
 try:
     print("--- KODYS SYSTEM BOOT INITIATED ---")
     sys.stdout.flush()
+    show_error("Kodys Clinical Engine: Entry Point Reached.\n(If this is the only popup you see, a dependency import is failing.)", "Boot Milestone 1/4")
 except:
     pass
 
@@ -117,6 +118,15 @@ except Exception as e:
     except:
         _handlers = [logging.StreamHandler(sys.stdout) if sys.stdout else logging.NullHandler()]
 
+# Milestone 2: Logging Initialized
+try:
+    log_info = "Stream Only"
+    for h in _handlers:
+        if isinstance(h, SafeFileHandler): log_info = h.baseFilename
+    show_error(f"Kodys Clinical Engine: Logging System Ready.\nLog File: {log_info}", "Boot Milestone 2/4")
+except:
+    pass
+
 # Detect process role for cleaner logging
 _is_server = len(sys.argv) > 1 and "runserver" in sys.argv
 _role = "KodysServer" if _is_server else "KodysMain"
@@ -148,8 +158,14 @@ class StreamToLogger:
 # 3. Safe Logging Framework (Phase 3 Resilience)
 class SafeFileHandler(logging.FileHandler):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.broken = False
+        try:
+            self.broken = False
+            super().__init__(*args, **kwargs)
+        except Exception as e:
+            self.broken = True
+            try:
+                sys.stderr.write(f"\n--- SafeFileHandler INIT FAILED: {e} ---\n")
+            except: pass
 
     def emit(self, record):
         if self.broken: return
@@ -2950,6 +2966,11 @@ if __name__ == "__main__":
     
     # Create and display a professional splash screen with fallback
     splash_w, splash_h = 600, 400
+    # Milky Milestone 3: GUI Starting
+    try:
+        show_error("Kodys Clinical Engine: Initializing GUI and Splash Screen.", "Boot Milestone 3/4")
+    except: pass
+    
     splash_pix = QtGui.QPixmap(resource_path("splash_screen.png"))
     
     # If image is missing, create a branded fallback box
